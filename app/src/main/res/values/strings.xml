@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">DATN</string>
+    <string name="title_activity_home">Home</string>
+    <string name="title_activity_intro_screen">IntroScreen</string>
+    <string name="title_activity_splash_screen">SplashScreen</string>
+    <string name="title_activity_register_screen">RegisterScreen</string>
+    <string name="title_activity_login_screen">LoginScreen</string>
+    <string name="title_activity_product_detail">ProductDetail</string>
+</resources>
