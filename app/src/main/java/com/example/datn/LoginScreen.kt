@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -44,9 +43,15 @@ class LoginScreen : ComponentActivity() {
 @Composable
 fun LoginScreenContent() {
     val context = LocalContext.current
+
+    // Trạng thái cho input
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Trạng thái lỗi
+    var emailError by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -56,60 +61,100 @@ fun LoginScreenContent() {
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
+        Text("Đăng nhập", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text(
-            text = "Đăng nhập",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Thật vui khi gặp được bạn",
+            "Thật vui khi gặp được bạn",
             fontSize = 16.sp,
             color = Color.Gray,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
+        // Email input
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = "" // Xóa lỗi khi người dùng gõ lại
+            },
             label = { Text("Email") },
             placeholder = { Text("Nhập địa chỉ email của bạn") },
+            isError = emailError.isNotEmpty(), // Viền đỏ nếu có lỗi
+            supportingText = {
+                if (emailError.isNotEmpty())
+                    Text(emailError, color = MaterialTheme.colorScheme.error)
+            },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Password input
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = "" // Xóa lỗi khi người dùng gõ lại
+            },
             label = { Text("Mật khẩu") },
             placeholder = { Text("Nhập mật khẩu của bạn") },
+            isError = passwordError.isNotEmpty(), // Viền đỏ nếu có lỗi
+            supportingText = {
+                if (passwordError.isNotEmpty())
+                    Text(passwordError, color = MaterialTheme.colorScheme.error)
+            },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = null)
+                    Icon(imageVector = icon, contentDescription = null)
                 }
             }
         )
+
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Nút đăng nhập
         Button(
             onClick = {
+                // Reset lỗi trước khi kiểm tra
+                emailError = ""
+                passwordError = ""
+
+                var hasError = false
+
+                // Kiểm tra input rỗng
+                if (email.isBlank()) {
+                    emailError = "Vui lòng nhập email"
+                    hasError = true
+                }
+                if (password.isBlank()) {
+                    passwordError = "Vui lòng nhập mật khẩu"
+                    hasError = true
+                }
+
+                if (hasError) return@Button // Nếu có lỗi, không gửi request
+
+                // Gọi API để kiểm tra đăng nhập
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val users = RetrofitClient.apiService.getUsers()
                         val user = users.find { u -> u.email == email && u.password == password }
+
                         withContext(Dispatchers.Main) {
                             if (user != null) {
+                                // Đăng nhập thành công
                                 Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
                                 val intent = Intent(context, Home::class.java)
                                 context.startActivity(intent)
                                 (context as ComponentActivity).finish()
                             } else {
-                                Toast.makeText(context, "Thông tin đăng nhập sai, vui lòng nhập lại", Toast.LENGTH_SHORT).show()
+                                // Sai thông tin => hiển thị lỗi
+                                emailError = "Email hoặc mật khẩu không đúng"
+                                passwordError = "Email hoặc mật khẩu không đúng"
                             }
                         }
                     } catch (e: Exception) {
+                        // Lỗi kết nối
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
@@ -124,8 +169,10 @@ fun LoginScreenContent() {
         ) {
             Text("Đăng nhập", color = Color.White)
         }
+
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Chuyển sang màn hình đăng ký nếu chưa có tài khoản
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center

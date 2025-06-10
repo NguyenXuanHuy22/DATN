@@ -9,5 +9,7 @@ data class User(
     val address: String,
     val cartId: String,
     val wishlistId: String,
-    val orderHistoryId: String
+    val orderHistoryId: String,
+    val role: String = "user"
+
 )

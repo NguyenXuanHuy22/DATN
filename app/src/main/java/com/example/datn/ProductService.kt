@@ -14,6 +14,9 @@ interface ProductService {
     @GET("users")
     suspend fun getUsers(): List<User>
 
+    @POST("users")
+    suspend fun createUser(@Body user: User): Response<User>
+
     @GET("carts")
     suspend fun getCarts(): List<Cart>
 
