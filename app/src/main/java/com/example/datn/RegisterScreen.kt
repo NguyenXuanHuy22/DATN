@@ -27,34 +27,39 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import java.security.SecureRandom
+import java.util.Base64
 
-// Màn hình đăng ký là một ComponentActivity (hoạt động riêng biệt)
 class RegisterScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Bật chế độ full màn hình
+        enableEdgeToEdge()
         setContent {
             DATNTheme {
-                RegisterScreenContent() // Gọi hàm giao diện chính
+                RegisterScreenContent()
             }
         }
     }
+}
+
+fun generateShortId(): String {
+    val random = SecureRandom()
+    val bytes = ByteArray(6)
+    random.nextBytes(bytes)
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes).substring(0, 8)
 }
 
 @Composable
 fun RegisterScreenContent() {
     val context = LocalContext.current
 
-    // Các biến trạng thái để lưu giá trị người dùng nhập
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) } // Hiện/ẩn mật khẩu
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    // Trạng thái lỗi cho từng trường nhập liệu
     var nameError by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf("") }
     var phoneError by remember { mutableStateOf("") }
@@ -68,11 +73,11 @@ fun RegisterScreenContent() {
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            // Tiêu đề màn hình
             Text("Tạo tài khoản", fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Text("Hãy tạo một tài khoản cho bạn", fontSize = 16.sp, color = Color.Gray)
 
-            // Nhập tên
+            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -81,14 +86,12 @@ fun RegisterScreenContent() {
                 },
                 label = { Text("Tên") },
                 isError = nameError.isNotEmpty(),
-                supportingText = {
-                    if (nameError.isNotEmpty()) Text(nameError, color = MaterialTheme.colorScheme.error)
-                },
+                supportingText = { if (nameError.isNotEmpty()) Text(nameError, color = MaterialTheme.colorScheme.error) },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nhập email
             OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -97,30 +100,26 @@ fun RegisterScreenContent() {
                 },
                 label = { Text("Email") },
                 isError = emailError.isNotEmpty(),
-                supportingText = {
-                    if (emailError.isNotEmpty()) Text(emailError, color = MaterialTheme.colorScheme.error)
-                },
+                supportingText = { if (emailError.isNotEmpty()) Text(emailError, color = MaterialTheme.colorScheme.error) },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nhập số điện thoại
             OutlinedTextField(
                 value = phone,
                 onValueChange = {
                     phone = it
                     phoneError = ""
                 },
-                label = { Text("SĐT") },
+                label = { Text("Số điện thoại") },
                 isError = phoneError.isNotEmpty(),
-                supportingText = {
-                    if (phoneError.isNotEmpty()) Text(phoneError, color = MaterialTheme.colorScheme.error)
-                },
+                supportingText = { if (phoneError.isNotEmpty()) Text(phoneError, color = MaterialTheme.colorScheme.error) },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nhập mật khẩu + hiện/ẩn
             OutlinedTextField(
                 value = password,
                 onValueChange = {
@@ -131,21 +130,16 @@ fun RegisterScreenContent() {
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null
-                        )
+                        Icon(if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
                     }
                 },
                 isError = passwordError.isNotEmpty(),
-                supportingText = {
-                    if (passwordError.isNotEmpty()) Text(passwordError, color = MaterialTheme.colorScheme.error)
-                },
+                supportingText = { if (passwordError.isNotEmpty()) Text(passwordError, color = MaterialTheme.colorScheme.error) },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nhập địa chỉ
             OutlinedTextField(
                 value = address,
                 onValueChange = {
@@ -154,17 +148,15 @@ fun RegisterScreenContent() {
                 },
                 label = { Text("Địa chỉ") },
                 isError = addressError.isNotEmpty(),
-                supportingText = {
-                    if (addressError.isNotEmpty()) Text(addressError, color = MaterialTheme.colorScheme.error)
-                },
+                supportingText = { if (addressError.isNotEmpty()) Text(addressError, color = MaterialTheme.colorScheme.error) },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Nút đăng ký
             Button(
                 onClick = {
-                    // Reset lỗi trước khi kiểm tra lại
+                    // Reset lỗi
                     nameError = ""
                     emailError = ""
                     phoneError = ""
@@ -174,7 +166,6 @@ fun RegisterScreenContent() {
                     val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
                     var hasError = false
 
-                    // Kiểm tra từng trường
                     if (name.isBlank()) {
                         nameError = "Vui lòng nhập tên"
                         hasError = true
@@ -199,10 +190,9 @@ fun RegisterScreenContent() {
                         hasError = true
                     }
 
-                    // Nếu có lỗi, không tiếp tục
                     if (hasError) return@Button
 
-                    // Gọi API kiểm tra email và thêm user mới
+                    // Xử lý đăng ký
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val users = RetrofitClient.apiService.getUsers()
@@ -213,28 +203,44 @@ fun RegisterScreenContent() {
                                     emailError = "Email đã được sử dụng"
                                 }
                             } else {
-                                // Tạo đối tượng user mới với ID ngẫu nhiên và các ID liên kết
+                                val userId = generateShortId()
+                                val cartId = generateShortId()
+                                val wishlistId = generateShortId()
+                                val orderHistoryId = generateShortId()
+
                                 val newUser = User(
-                                    id = UUID.randomUUID().toString(),
+                                    id = userId,
                                     name = name,
                                     email = email,
                                     password = password,
                                     phone = phone,
                                     address = address,
                                     role = "user",
-                                    cartId = UUID.randomUUID().toString(),
-                                    wishlistId = UUID.randomUUID().toString(),
-                                    orderHistoryId = UUID.randomUUID().toString()
+                                    cartId = cartId,
+                                    wishlistId = wishlistId,
+                                    orderHistoryId = orderHistoryId
                                 )
 
-                                // Gọi API tạo người dùng
+                                val newCart = Cart(id = cartId, userId = userId, items = emptyList())
+                                val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())
+                                val newOrderHistory = Order(
+                                    id = orderHistoryId,
+                                    userId = userId,
+                                    date = "", // bạn có thể thay thế bằng ngày giờ hiện tại nếu muốn
+                                    items = emptyList(),
+                                    total = 0,
+                                    status = "Chưa có đơn hàng"
+                                )
+
+                                // Gọi API để lưu dữ liệu
                                 RetrofitClient.apiService.createUser(newUser)
+                                RetrofitClient.apiService.createCart(newCart)
+                                RetrofitClient.apiService.createWishlist(newWishlist)
+                                RetrofitClient.apiService.createOrder(newOrderHistory)
 
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
-                                    // Điều hướng đến Home
-                                    val intent = Intent(context, Home::class.java)
-                                    context.startActivity(intent)
+                                    context.startActivity(Intent(context, Home::class.java))
                                 }
                             }
                         } catch (e: Exception) {
@@ -255,15 +261,16 @@ fun RegisterScreenContent() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Link điều hướng đến màn hình đăng nhập
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Text("Bạn đã có tài khoản? ")
                 Text(
                     "Đăng nhập",
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
-                        val intent = Intent(context, LoginScreen::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(Intent(context, LoginScreen::class.java))
                     }
                 )
             }

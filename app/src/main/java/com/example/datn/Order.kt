@@ -11,6 +11,8 @@ data class Order(
 
 data class OrderItem(
     val productId: String,
+    val image: String,
+    val price: Int,
     val quantity: Int,
     val size: String,
     val color: String

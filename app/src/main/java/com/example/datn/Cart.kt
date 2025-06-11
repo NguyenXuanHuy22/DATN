@@ -8,6 +8,8 @@ data class Cart(
 
 data class CartItem(
     val productId: String,
+    val image: String,
+    val price: Int,
     val quantity: Int,
     val size: String,
     val color: String
