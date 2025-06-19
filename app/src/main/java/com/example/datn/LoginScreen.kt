@@ -1,5 +1,6 @@
 package com.example.datn
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -44,12 +45,10 @@ class LoginScreen : ComponentActivity() {
 fun LoginScreenContent() {
     val context = LocalContext.current
 
-    // Trạng thái cho input
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Trạng thái lỗi
     var emailError by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf("") }
 
@@ -69,16 +68,15 @@ fun LoginScreenContent() {
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        // Email input
         OutlinedTextField(
             value = email,
             onValueChange = {
                 email = it
-                emailError = "" // Xóa lỗi khi người dùng gõ lại
+                emailError = ""
             },
             label = { Text("Email") },
             placeholder = { Text("Nhập địa chỉ email của bạn") },
-            isError = emailError.isNotEmpty(), // Viền đỏ nếu có lỗi
+            isError = emailError.isNotEmpty(),
             supportingText = {
                 if (emailError.isNotEmpty())
                     Text(emailError, color = MaterialTheme.colorScheme.error)
@@ -87,16 +85,15 @@ fun LoginScreenContent() {
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Password input
         OutlinedTextField(
             value = password,
             onValueChange = {
                 password = it
-                passwordError = "" // Xóa lỗi khi người dùng gõ lại
+                passwordError = ""
             },
             label = { Text("Mật khẩu") },
             placeholder = { Text("Nhập mật khẩu của bạn") },
-            isError = passwordError.isNotEmpty(), // Viền đỏ nếu có lỗi
+            isError = passwordError.isNotEmpty(),
             supportingText = {
                 if (passwordError.isNotEmpty())
                     Text(passwordError, color = MaterialTheme.colorScheme.error)
@@ -113,16 +110,13 @@ fun LoginScreenContent() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Nút đăng nhập
         Button(
             onClick = {
-                // Reset lỗi trước khi kiểm tra
                 emailError = ""
                 passwordError = ""
 
                 var hasError = false
 
-                // Kiểm tra input rỗng
                 if (email.isBlank()) {
                     emailError = "Vui lòng nhập email"
                     hasError = true
@@ -132,31 +126,42 @@ fun LoginScreenContent() {
                     hasError = true
                 }
 
-                if (hasError) return@Button // Nếu có lỗi, không gửi request
+                if (hasError) return@Button
 
-                // Gọi API để kiểm tra đăng nhập
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val users = RetrofitClient.apiService.getUsers()
-                        val user = users.find { u -> u.email == email && u.password == password }
-
+                        val response = RetrofitClient.apiService.getUsers()
                         withContext(Dispatchers.Main) {
-                            if (user != null) {
-                                // Đăng nhập thành công
-                                Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
-                                val intent = Intent(context, Home::class.java)
-                                context.startActivity(intent)
-                                (context as ComponentActivity).finish()
+                            if (response.isSuccessful) {
+                                val users = response.body() ?: emptyList()
+                                val user = users.find { u -> u.email == email && u.password == password }
+
+                                if (user != null) {
+                                    // Save userId to SharedPreferences
+                                    context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .putString("userId", user.id)
+                                        .apply()
+
+                                    Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
+                                    val intent = Intent(context, Home::class.java)
+                                    context.startActivity(intent)
+                                    (context as ComponentActivity).finish()
+                                } else {
+                                    emailError = "Email hoặc mật khẩu không đúng"
+                                    passwordError = "Email hoặc mật khẩu không đúng"
+                                }
                             } else {
-                                // Sai thông tin => hiển thị lỗi
-                                emailError = "Email hoặc mật khẩu không đúng"
-                                passwordError = "Email hoặc mật khẩu không đúng"
+                                Toast.makeText(
+                                    context,
+                                    "Lỗi lấy danh sách người dùng: ${response.message()}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                     } catch (e: Exception) {
-                        // Lỗi kết nối
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
@@ -172,7 +177,6 @@ fun LoginScreenContent() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Chuyển sang màn hình đăng ký nếu chưa có tài khoản
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
@@ -180,7 +184,7 @@ fun LoginScreenContent() {
             Text("Bạn chưa có tài khoản? ")
             Text(
                 text = "Đăng ký",
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable {
                     val intent = Intent(context, RegisterScreen::class.java)

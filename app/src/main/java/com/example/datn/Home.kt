@@ -45,12 +45,12 @@ class Home : ComponentActivity() {
 @Composable
 fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
     val context = LocalContext.current
-    val productList by viewModel.product.observeAsState(emptyList())
+    val productList by viewModel.products.observeAsState(emptyList())
     var selectedCategory by remember { mutableStateOf("Tất cả") }
     var searchText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.getListProduct()
+        viewModel.getListProducts() // đúng tên hàm
     }
 
     Scaffold(

@@ -3,12 +3,12 @@ package com.example.datn
 data class Wishlist(
     val id: String,
     val userId: String,
-    val items: List<WishlistItem>
+    val items: List<WishlistItem> = emptyList()
 )
 
 data class WishlistItem(
     val productId: String,
     val image: String,
-    val price: Int,
-    val name: String
+    val name: String,
+    val price: Int
 )

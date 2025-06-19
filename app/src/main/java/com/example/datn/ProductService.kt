@@ -9,45 +9,44 @@ import retrofit2.http.Path
 
 interface ProductService {
     @GET("products")
-    suspend fun getListProducts(): Response<List<Product>>
+    suspend fun getListProducts(): Response<List<ProductData>>
+
+    @GET("products/{id}")
+    suspend fun getProduct(@Path("id") id: String): Response<ProductData>
 
     @GET("users")
-    suspend fun getUsers(): List<User>
+    suspend fun getUsers(): Response<List<User>>
 
     @POST("users")
     suspend fun createUser(@Body user: User): Response<User>
 
+    @GET("carts/{userId}")
+    suspend fun getCart(@Path("userId") userId: String): Response<Cart?>
+
     @GET("carts")
-    suspend fun getCarts(): List<Cart>
-
-    @GET("wishlists")
-    suspend fun getWishlists(): List<Wishlist>
-
-    @GET("orders")
-    suspend fun getOrders(): List<Order>
-
-    @POST("users")
-    suspend fun registerUser(@Body user: User): User
+    suspend fun getCarts(): Response<List<Cart>>
 
     @POST("carts")
-    suspend fun createCart(@Body cart: Cart): Cart
-
-    @POST("wishlists")
-    suspend fun createWishlist(@Body wishlist: Wishlist): Wishlist
-
-    @POST("orders")
-    suspend fun createOrder(@Body order: Order): Order
+    suspend fun createCart(@Body cart: Cart): Response<Cart>
 
     @PUT("carts/{id}")
-    suspend fun updateCart(@Path("id") id: String, @Body cart: Cart): Cart
+    suspend fun updateCart(@Path("id") id: String, @Body cart: Cart): Response<Cart>
+
+    @GET("wishlists")
+    suspend fun getWishlists(): Response<List<Wishlist>>
+
+    @POST("wishlists")
+    suspend fun createWishlist(@Body wishlist: Wishlist): Response<Wishlist>
 
     @PUT("wishlists/{id}")
-    suspend fun updateWishlist(@Path("id") id: String, @Body wishlist: Wishlist): Wishlist
+    suspend fun updateWishlist(@Path("id") id: String, @Body wishlist: Wishlist): Response<Wishlist>
+
+    @GET("orders")
+    suspend fun getOrders(): Response<List<Order>>
+
+    @POST("orders")
+    suspend fun createOrder(@Body order: Order): Response<Order>
 
     @PUT("orders/{id}")
-    suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Order
-
-    @GET("products/{id}")
-    suspend fun getProductDetail(@Path("id") id: String): Response<Product>
-
+    suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
 }

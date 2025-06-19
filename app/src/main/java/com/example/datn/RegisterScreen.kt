@@ -1,5 +1,7 @@
 package com.example.datn
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -130,7 +132,10 @@ fun RegisterScreenContent() {
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null
+                        )
                     }
                 },
                 isError = passwordError.isNotEmpty(),
@@ -156,7 +161,6 @@ fun RegisterScreenContent() {
 
             Button(
                 onClick = {
-                    // Reset lỗi
                     nameError = ""
                     emailError = ""
                     phoneError = ""
@@ -192,55 +196,95 @@ fun RegisterScreenContent() {
 
                     if (hasError) return@Button
 
-                    // Xử lý đăng ký
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val users = RetrofitClient.apiService.getUsers()
-                            val emailExists = users.any { it.email == email }
+                            val response = RetrofitClient.apiService.getUsers()
+                            if (response.isSuccessful) {
+                                val users = response.body() ?: emptyList()
+                                val emailExists = users.any { user -> user.email == email }
+                                val phoneExists = users.any { user -> user.phone == phone }
 
-                            if (emailExists) {
-                                withContext(Dispatchers.Main) {
-                                    emailError = "Email đã được sử dụng"
+                                if (emailExists || phoneExists) {
+                                    withContext(Dispatchers.Main) {
+                                        if (emailExists) emailError = "Email đã được sử dụng"
+                                        if (phoneExists) phoneError = "Số điện thoại đã được sử dụng"
+                                    }
+                                } else {
+                                    val userId = generateShortId()
+                                    val cartId = generateShortId()
+                                    val wishlistId = generateShortId()
+                                    val orderId = generateShortId()
+
+                                    val newUser = User(
+                                        id = userId,
+                                        name = name,
+                                        email = email,
+                                        password = password,
+                                        phone = phone,
+                                        address = address,
+                                        role = "user"
+                                    )
+
+                                    val newCart = Cart(id = cartId, userId = userId, items = emptyList())
+                                    val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())
+                                    val newOrder = Order(
+                                        id = orderId,
+                                        userId = userId,
+                                        total = 0,
+                                        status = "Chưa có đơn hàng",
+                                        items = emptyList(),
+                                    )
+
+                                    val createUserResponse = RetrofitClient.apiService.createUser(newUser)
+                                    if (createUserResponse.isSuccessful) {
+                                        val cartResponse = RetrofitClient.apiService.createCart(newCart)
+                                        val wishlistResponse = RetrofitClient.apiService.createWishlist(newWishlist)
+                                        val orderResponse = RetrofitClient.apiService.createOrder(newOrder)
+
+                                        if (cartResponse.isSuccessful && wishlistResponse.isSuccessful && orderResponse.isSuccessful) {
+                                            // Save userId to SharedPreferences
+                                            context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                                                .edit()
+                                                .putString("userId", userId)
+                                                .apply()
+
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
+                                                context.startActivity(Intent(context, Home::class.java))
+                                                (context as? Activity)?.finish()
+                                            }
+                                        } else {
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Lỗi khi tạo dữ liệu phụ: ${
+                                                        when {
+                                                            !cartResponse.isSuccessful -> "giỏ hàng (${cartResponse.message()})"
+                                                            !wishlistResponse.isSuccessful -> "danh sách yêu thích (${wishlistResponse.message()})"
+                                                            else -> "đơn hàng (${orderResponse.message()})"
+                                                        }
+                                                    }",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                "Lỗi tạo người dùng: ${createUserResponse.message()}",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
                                 }
                             } else {
-                                val userId = generateShortId()
-                                val cartId = generateShortId()
-                                val wishlistId = generateShortId()
-                                val orderHistoryId = generateShortId()
-
-                                val newUser = User(
-                                    id = userId,
-                                    name = name,
-                                    email = email,
-                                    password = password,
-                                    phone = phone,
-                                    address = address,
-                                    role = "user",
-                                    cartId = cartId,
-                                    wishlistId = wishlistId,
-                                    orderHistoryId = orderHistoryId
-                                )
-
-                                val newCart = Cart(id = cartId, userId = userId, items = emptyList())
-                                val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())
-                                val newOrderHistory = Order(
-                                    id = orderHistoryId,
-                                    userId = userId,
-                                    date = "", // bạn có thể thay thế bằng ngày giờ hiện tại nếu muốn
-                                    items = emptyList(),
-                                    total = 0,
-                                    status = "Chưa có đơn hàng"
-                                )
-
-                                // Gọi API để lưu dữ liệu
-                                RetrofitClient.apiService.createUser(newUser)
-                                RetrofitClient.apiService.createCart(newCart)
-                                RetrofitClient.apiService.createWishlist(newWishlist)
-                                RetrofitClient.apiService.createOrder(newOrderHistory)
-
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
-                                    context.startActivity(Intent(context, Home::class.java))
+                                    Toast.makeText(
+                                        context,
+                                        "Lỗi lấy danh sách người dùng: ${response.message()}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             }
                         } catch (e: Exception) {
@@ -267,8 +311,9 @@ fun RegisterScreenContent() {
             ) {
                 Text("Bạn đã có tài khoản? ")
                 Text(
-                    "Đăng nhập",
+                    text = "Đăng nhập",
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable {
                         context.startActivity(Intent(context, LoginScreen::class.java))
                     }

@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class ProductData(
     @SerializedName("id") val id: String,
+    @SerializedName("category") val category: String,
     @SerializedName("name") val name: String,
     @SerializedName("price") val price: Int,
     @SerializedName("sizes") val sizes: List<String>,
@@ -15,6 +16,7 @@ data class ProductData(
 fun ProductData.toProduct(): Product {
     return Product(
         id = id,
+        category = category,
         name = name,
         price = price,
         sizes = sizes,

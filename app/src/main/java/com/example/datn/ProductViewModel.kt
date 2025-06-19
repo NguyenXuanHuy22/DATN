@@ -1,61 +1,58 @@
 package com.example.datn
 
-import android.support.v4.os.IResultReceiver._Parcel
 import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import androidx.lifecycle.*
-
 
 class ProductViewModel : ViewModel() {
-    private val lstProduct = MutableLiveData<List<Product>>()
-    val product: LiveData<List<Product>> = lstProduct
+    val products = MutableLiveData<List<Product>>()
+    val productDetail = MutableLiveData<ProductData?>()
+    val isLoading = MutableLiveData<Boolean>()
+    val error = MutableLiveData<String?>()
 
-    private val _productDetail = MutableLiveData<Product?>()
-    val productDetail: LiveData<Product?> = _productDetail
-
-
-
-    fun getListProduct() {
+    fun getListProducts() {
         viewModelScope.launch {
+            isLoading.postValue(true)
             try {
                 val response = RetrofitClient.apiService.getListProducts()
-                if (response.isSuccessful && response.body() != null) {
-                    val products = response.body()!! // Không cần map vì đã là List<Product>
-                    lstProduct.postValue(products)
-                    Log.d("ProductViewModel", "Danh sách sản phẩm: $products")
+                if (response.isSuccessful) {
+                    products.postValue(response.body()?.map { it.toProduct() } ?: emptyList())
+                    error.postValue(null)
                 } else {
-                    lstProduct.postValue(emptyList())
-                    Log.e("ProductViewModel", "Lỗi phản hồi API: ${response.code()} - ${response.message()}")
+                    error.postValue("Lỗi ${response.code()}: ${response.message()}")
+                    products.postValue(emptyList())
                 }
             } catch (e: Exception) {
-                lstProduct.postValue(emptyList())
-                Log.e("ProductViewModel", "Lỗi gọi API: ${e.message}", e)
+                error.postValue("Lỗi tải danh sách sản phẩm: ${e.message}")
+                products.postValue(emptyList())
+                Log.e("ProductViewModel", "Lỗi gọi API danh sách sản phẩm: ${e.message}", e)
+            } finally {
+                isLoading.postValue(false)
             }
         }
-    }
-    fun getProductDetail(id: String) {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.apiService.getProductDetail(id)
-                if (response.isSuccessful && response.body() != null) {
-                    _productDetail.postValue(response.body())
-                    Log.d("ProductViewModel", "Chi tiết sản phẩm: ${response.body()}")
-                } else {
-                    _productDetail.postValue(null)
-                    Log.e("ProductViewModel", "Lỗi phản hồi chi tiết: ${response.code()} - ${response.message()}")
-                }
-            } catch (e: Exception) {
-                _productDetail.postValue(null)
-                Log.e("ProductViewModel", "Lỗi khi gọi chi tiết: ${e.message}", e)
-            }
-        }
-    }
-    fun getProductById(id: String): Product? {
-        return product.value?.find { it.id == id }
     }
 
+    fun getProductDetail(productId: String) {
+        viewModelScope.launch {
+            isLoading.postValue(true)
+            try {
+                val response = RetrofitClient.apiService.getProduct(productId)
+                if (response.isSuccessful) {
+                    productDetail.postValue(response.body())
+                    error.postValue(null)
+                } else {
+                    error.postValue("Lỗi ${response.code()}: ${response.message()} (productId: $productId)")
+                    productDetail.postValue(null)
+                }
+            } catch (e: Exception) {
+                error.postValue("Lỗi tải chi tiết sản phẩm: ${e.message} (productId: $productId)")
+                productDetail.postValue(null)
+                Log.e("ProductViewModel", "Lỗi gọi API chi tiết sản phẩm: ${e.message}", e)
+            } finally {
+                isLoading.postValue(false)
+            }
+        }
+    }
 }
