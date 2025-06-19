@@ -28,14 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.datn.ui.theme.DATNTheme
+//import com.example.datn.ui.theme.DATNTheme
 
 class Home : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            DATNTheme {
+            MaterialTheme {
                 HomeScreen()
             }
         }
@@ -153,6 +153,8 @@ fun ProductItem(product: Product, onClick: () -> Unit) {
 
 @Composable
 fun BottomNavigationBar() {
+    val context = LocalContext.current
+
     BottomNavigation(
         backgroundColor = Color.White,
         contentColor = Color.Black
@@ -183,10 +185,14 @@ fun BottomNavigationBar() {
         )
         BottomNavigationItem(
             selected = false,
-            onClick = {},
+            onClick = {
+                val intent = Intent(context, Account::class.java)
+                context.startActivity(intent)
+            },
             icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
             label = { Text("Account") }
         )
     }
 }
+
 
