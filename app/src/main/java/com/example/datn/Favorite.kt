@@ -1,5 +1,6 @@
 package com.example.datn
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,12 +10,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.datn.ui.theme.DATNTheme
@@ -34,6 +41,7 @@ class Favorite : ComponentActivity() {
 @Composable
 fun FavoriteScreen() {
     Scaffold(
+
         topBar = {
             TopAppBar(
                 title = { Text("Sản phẩm yêu thích") }, //san pham yeu thich
@@ -41,6 +49,9 @@ fun FavoriteScreen() {
                 contentColor = Color.Black
             )
 
+        },
+        bottomBar = {
+            BottomNavigationBarr()
         }
     ) { innerPadding ->
         Column(
@@ -106,6 +117,51 @@ fun FavoriteItem(product: Product, onDelete: () -> Unit) {
         ) {
             Icon(Icons.Default.Delete, contentDescription = "Xoá khỏi yêu thích")
         }
+    }
+}
+
+@Composable
+fun BottomNavigationBarrr() {
+    val context = LocalContext.current
+
+    BottomNavigation(
+        backgroundColor = Color.White,
+        contentColor = Color.Black
+    ) {
+        BottomNavigationItem(
+            selected = true,
+            onClick = {
+                context.startActivity(Intent(context, Home::class.java))
+            },
+            icon = { androidx.compose.material.Icon(Icons.Default.Home, contentDescription = null) },
+            label = { androidx.compose.material.Text("Home") }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {},
+            icon = { androidx.compose.material.Icon(Icons.Default.Search, contentDescription = null) },
+            label = { androidx.compose.material.Text("Search") }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {},
+            icon = { androidx.compose.material.Icon(Icons.Default.Favorite, contentDescription = null) },
+            label = { androidx.compose.material.Text("Saved") }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {},
+            icon = { androidx.compose.material.Icon(Icons.Default.ShoppingCart, contentDescription = null) },
+            label = { androidx.compose.material.Text("Cart") }
+        )
+        BottomNavigationItem(
+            selected = false,
+            onClick = {
+
+            },
+            icon = { androidx.compose.material.Icon(Icons.Default.AccountCircle, contentDescription = null) },
+            label = { androidx.compose.material.Text("Account") }
+        )
     }
 }
 
