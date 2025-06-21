@@ -172,8 +172,10 @@ fun BottomNavigationBar() {
             label = { Text("Search") }
         )
         BottomNavigationItem(
-            selected = false,
-            onClick = {},
+            selected = true,
+            onClick = {
+                val intent = Intent(context, Favorite::class.java)
+                context.startActivity(intent)},
             icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
             label = { Text("Saved") }
         )

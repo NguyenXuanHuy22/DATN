@@ -21,6 +21,15 @@
             android:label="@string/title_activity_product_detail"
             android:theme="@style/Theme.DATN" />
         <activity
+            android:name=".Favorite"
+            android:exported="false"
+            android:label="Favorite"
+            android:theme="@style/Theme.DATN">
+
+
+        </activity>
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:label="@string/title_activity_splash_screen"
