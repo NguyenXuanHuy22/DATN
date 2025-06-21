@@ -36,7 +36,7 @@ fun FavoriteScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sản phẩm yêu thích") },
+                title = { Text("Sản phẩm yêu thích") }, //san pham yeu thich
                 backgroundColor = Color.White,
                 contentColor = Color.Black
             )
