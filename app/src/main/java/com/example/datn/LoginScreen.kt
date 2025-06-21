@@ -141,6 +141,7 @@ fun LoginScreenContent() {
                                     context.getSharedPreferences("auth", Context.MODE_PRIVATE)
                                         .edit()
                                         .putString("userId", user.id)
+                                        .putString("userRole", user.role)
                                         .apply()
 
                                     Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
