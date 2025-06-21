@@ -50,7 +50,7 @@ fun FavoriteScreen() {
             )
 
         },
-        bottomBar = {
+        bottomBar = { //test
             BottomNavigationBarr()
         }
     ) { innerPadding ->
