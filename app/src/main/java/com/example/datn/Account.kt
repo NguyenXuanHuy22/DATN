@@ -188,7 +188,9 @@ fun BottomNavigationBarr() {
         )
         BottomNavigationItem(
             selected = false,
-            onClick = {},
+            onClick = {
+                context.startActivity(Intent(context, SearchActivity::class.java))
+            },
             icon = { androidx.compose.material.Icon(Icons.Default.Search, contentDescription = null) },
             label = { androidx.compose.material.Text("Search") }
         )

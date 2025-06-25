@@ -84,7 +84,7 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
                 singleLine = true
             )
 
-            val categories = listOf("Tất cả", "Bóng đá", "Cầu lông", "Pickleball")
+            val categories = listOf("Tất cả", "Bóng đá", "Cầu lông")
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 categories.forEach { category ->
                     val isSelected = selectedCategory == category
