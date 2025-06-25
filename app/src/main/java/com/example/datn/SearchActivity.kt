@@ -12,7 +12,7 @@ class SearchActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                SearchScreen()
+                SearchScreen()//hehehe
             }
         }
     }
