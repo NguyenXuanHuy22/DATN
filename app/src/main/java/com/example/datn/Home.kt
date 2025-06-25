@@ -167,7 +167,10 @@ fun BottomNavigationBar() {
         )
         BottomNavigationItem(
             selected = false,
-            onClick = {},
+            onClick = {
+                val intent = Intent(context, SearchActivity::class.java)
+                context.startActivity(intent)
+            },
             icon = { Icon(Icons.Default.Search, contentDescription = null) },
             label = { Text("Search") }
         )
