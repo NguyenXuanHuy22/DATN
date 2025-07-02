@@ -36,7 +36,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
     val allProducts by viewModel.products.observeAsState(emptyList())
     var query by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
-        viewModel.getListProducts() // ⬅ THÊM DÒNG NÀY
+        viewModel.getListProducts() //  THÊM DÒNG NÀY
     }
     val suggestions = listOf(
         "Áo đá bóng", "Áo cầu lông", "kamito", "Nike shoes black", "V-neck t-shirt"
