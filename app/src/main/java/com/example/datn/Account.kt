@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 class Account : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +57,7 @@ fun AccountScreen() {
             )
         },
         bottomBar = {
-            BottomNavigationBarr()
+            BottomNavigationBarr(currentScreen = "Account")
         }
     ) { padding ->
         Column(
@@ -171,48 +172,54 @@ fun AccountMenuItem(
 }
 
 @Composable
-fun BottomNavigationBarr() {
+fun BottomNavigationBarr(currentScreen: String) {
     val context = LocalContext.current
 
     BottomNavigation(
         backgroundColor = Color.White,
-        contentColor = Color.Black
+        contentColor = Color.Black,
+        elevation = 2.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
-        BottomNavigationItem(
-            selected = true,
-            onClick = {
-                context.startActivity(Intent(context, Home::class.java))
-            },
-            icon = { androidx.compose.material.Icon(Icons.Default.Home, contentDescription = null) },
-            label = { androidx.compose.material.Text("Home") }
+        val items = listOf(
+            Triple("Home", Icons.Default.Home, Home::class.java),
+            Triple("Search", Icons.Default.Search, SearchActivity::class.java),
+            Triple("Saved", Icons.Default.Favorite, Favorite::class.java),
+            Triple("Cart", Icons.Default.ShoppingCart, CartScreen::class.java),
+            Triple("Account", Icons.Default.AccountCircle, Account::class.java)
         )
-        BottomNavigationItem(
-            selected = false,
-            onClick = {
-                context.startActivity(Intent(context, SearchActivity::class.java))
-            },
-            icon = { androidx.compose.material.Icon(Icons.Default.Search, contentDescription = null) },
-            label = { androidx.compose.material.Text("Search") }
-        )
-        BottomNavigationItem(
-            selected = false,
-            onClick = {},
-            icon = { androidx.compose.material.Icon(Icons.Default.Favorite, contentDescription = null) },
-            label = { androidx.compose.material.Text("Saved") }
-        )
-        BottomNavigationItem(
-            selected = false,
-            onClick = {},
-            icon = { androidx.compose.material.Icon(Icons.Default.ShoppingCart, contentDescription = null) },
-            label = { androidx.compose.material.Text("Cart") }
-        )
-        BottomNavigationItem(
-            selected = false,
-            onClick = {
 
-            },
-            icon = { androidx.compose.material.Icon(Icons.Default.AccountCircle, contentDescription = null) },
-            label = { androidx.compose.material.Text("Account") }
-        )
+        items.forEach { (label, icon, activityClass) ->
+            BottomNavigationItem(
+                selected = currentScreen == label,
+                onClick = {
+                    // 👉 Khi click chuyển sang màn mới nếu chưa phải màn hiện tại
+                    if (currentScreen != label) {
+                        context.startActivity(Intent(context, activityClass))
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        modifier = Modifier.size(20.dp),
+                        // 👉 Sửa tại đây: Nếu được chọn thì icon màu đen, không thì màu xám
+                        tint = if (currentScreen == label) Color.Black else Color.Gray
+                    )
+                },
+                label = {
+                    Text(
+                        text = label,
+                        fontSize = 10.sp,
+                        // 👉 Sửa tại đây: Nếu được chọn thì chữ màu đen, không thì màu xám
+                        color = if (currentScreen == label) Color.Black else Color.Gray
+                    )
+                }
+            )
+        }
     }
 }
+
+

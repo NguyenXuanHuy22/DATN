@@ -89,7 +89,8 @@ fun RegisterScreenContent() {
                 label = { Text("Tên") },
                 isError = nameError.isNotEmpty(),
                 supportingText = { if (nameError.isNotEmpty()) Text(nameError, color = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -103,7 +104,8 @@ fun RegisterScreenContent() {
                 label = { Text("Email") },
                 isError = emailError.isNotEmpty(),
                 supportingText = { if (emailError.isNotEmpty()) Text(emailError, color = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -117,7 +119,8 @@ fun RegisterScreenContent() {
                 label = { Text("Số điện thoại") },
                 isError = phoneError.isNotEmpty(),
                 supportingText = { if (phoneError.isNotEmpty()) Text(phoneError, color = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -140,7 +143,8 @@ fun RegisterScreenContent() {
                 },
                 isError = passwordError.isNotEmpty(),
                 supportingText = { if (passwordError.isNotEmpty()) Text(passwordError, color = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -154,7 +158,8 @@ fun RegisterScreenContent() {
                 label = { Text("Địa chỉ") },
                 isError = addressError.isNotEmpty(),
                 supportingText = { if (addressError.isNotEmpty()) Text(addressError, color = MaterialTheme.colorScheme.error) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
 
             Spacer(modifier = Modifier.height(24.dp))

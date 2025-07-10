@@ -6,4 +6,5 @@
     <string name="title_activity_register_screen">RegisterScreen</string>
     <string name="title_activity_login_screen">LoginScreen</string>
     <string name="title_activity_product_detail">ProductDetail</string>
+    <string name="title_activity_cart_screen">CartScreen</string>
 </resources>

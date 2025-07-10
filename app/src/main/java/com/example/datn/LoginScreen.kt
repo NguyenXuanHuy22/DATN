@@ -81,8 +81,10 @@ fun LoginScreenContent() {
                 if (emailError.isNotEmpty())
                     Text(emailError, color = MaterialTheme.colorScheme.error)
             },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -105,7 +107,10 @@ fun LoginScreenContent() {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(imageVector = icon, contentDescription = null)
                 }
-            }
+
+            },
+            singleLine = true,
+
         )
 
         Spacer(modifier = Modifier.height(24.dp))
