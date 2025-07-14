@@ -103,8 +103,9 @@ fun AccountScreen() {
                     Toast.makeText(context, "Doanh thu", Toast.LENGTH_SHORT).show()
                 }
                 Divider()
-                AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý danh mục sản phẩm") {
-                    Toast.makeText(context, "Quản lý danh mục sản phẩm", Toast.LENGTH_SHORT).show()
+                // banner của admin
+                AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý banner") {
+                    Toast.makeText(context, "Quản lý banner", Toast.LENGTH_SHORT).show()
                 }
                 Divider()
             }
