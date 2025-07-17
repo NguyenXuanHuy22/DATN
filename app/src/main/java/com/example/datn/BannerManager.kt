@@ -53,7 +53,7 @@ fun BannerManagerActivity() {
             )
         )
     }
-
+//giao dien quan ly banner
     Scaffold(
         topBar = {
             TopAppBar(
