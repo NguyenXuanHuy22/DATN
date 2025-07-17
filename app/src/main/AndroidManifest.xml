@@ -16,6 +16,11 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".BannerManager"
+            android:exported="false"
+            android:label="@string/title_activity_banner_manager_screen"
+            android:theme="@style/Theme.DATN" />
+        <activity
             android:name=".CartScreen"
             android:exported="false"
             android:label="@string/title_activity_cart_screen"
