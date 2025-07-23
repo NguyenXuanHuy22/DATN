@@ -23,18 +23,15 @@ class CartViewModel : ViewModel() {
     private var currentCartId: String? = null
     private var currentUserId: String? = null
 
-    // Tính tổng tiền các sản phẩm đã chọn
     val totalPrice: StateFlow<Int> = combine(_cartItems, _selectedItems) { items, selected ->
-        items.filter { selected.contains(it.productId) }
+        items.filter { selected.contains(it.itemId) }
             .sumOf { it.price * it.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    // Tính phí ship (30k nếu có ít nhất 1 sản phẩm)
     val shippingFee: StateFlow<Int> = totalPrice.map {
         if (it > 0) 30000 else 0
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    // Tính tổng tiền + phí ship
     val grandTotal: StateFlow<Int> = combine(totalPrice, shippingFee) { total, ship ->
         total + ship
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
@@ -50,10 +47,9 @@ class CartViewModel : ViewModel() {
                     _cartItems.value = cart.items.map { it.toCartItem() }
                     _errorMessage.value = null
                 } else {
-                    val newCartId = UUID.randomUUID().toString()
-                    val newCart = CartResponse(newCartId, userId, emptyList())
-                    RetrofitClient.cartService.createCart(newCart)
-                    currentCartId = newCartId
+                    val newCart = CartCreateRequest(userId, emptyList())
+                    val createdCart = RetrofitClient.cartService.createCart(newCart)
+                    currentCartId = createdCart.id
                     _cartItems.value = emptyList()
                     _errorMessage.value = null
                 }
@@ -69,26 +65,63 @@ class CartViewModel : ViewModel() {
         }
     }
 
-    fun toggleItemSelection(productId: String) {
+    fun toggleItemSelection(itemId: String) {
         _selectedItems.value = _selectedItems.value.toMutableSet().apply {
-            if (contains(productId)) remove(productId) else add(productId)
+            if (contains(itemId)) remove(itemId) else add(itemId)
         }
     }
 
-    fun updateItemQuantity(userId: String, productId: String, newQuantity: Int) {
-        if (newQuantity <= 0) return
-        val updatedList = _cartItems.value.map {
-            if (it.productId == productId) it.copy(quantity = newQuantity) else it
+    fun updateItemQuantity(userId: String, itemId: String, newQuantity: Int) {
+        viewModelScope.launch {
+            try {
+                val updatedList = _cartItems.value.map { item ->
+                    if (item.itemId == itemId) item.copy(quantity = newQuantity) else item
+                }
+                _cartItems.value = updatedList
+                updateCartOnServer(updatedList)
+            } catch (e: Exception) {
+                _errorMessage.value = "Không thể cập nhật số lượng: ${e.message}"
+            }
         }
+    }
+
+    fun deleteItem(itemId: String) {
+        val updatedList = _cartItems.value.filterNot { it.itemId == itemId }
         _cartItems.value = updatedList
+        _selectedItems.value = _selectedItems.value - itemId
         updateCartOnServer(updatedList)
     }
 
-    fun deleteItem(userId: String, productId: String) {
-        val updatedList = _cartItems.value.filterNot { it.productId == productId }
-        _cartItems.value = updatedList
-        _selectedItems.value = _selectedItems.value - productId
-        updateCartOnServer(updatedList)
+    fun addToCart(cartItem: CartItem) {
+        val userId = currentUserId
+        val cartId = currentCartId
+
+        if (userId == null || cartId == null) {
+            _errorMessage.value = "Không thể thêm vào giỏ hàng: thiếu userId hoặc cartId"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val existing = _cartItems.value.find { it.itemId == cartItem.itemId }
+
+                val updatedList = if (existing != null) {
+                    _cartItems.value.map {
+                        if (it.itemId == cartItem.itemId)
+                            it.copy(quantity = it.quantity + cartItem.quantity)
+                        else it
+                    }
+                } else {
+                    _cartItems.value + cartItem
+                }
+
+                _cartItems.value = updatedList
+                updateCartOnServer(updatedList)
+
+            } catch (e: Exception) {
+                _errorMessage.value = "Lỗi thêm vào giỏ hàng: ${e.message}"
+            }
+        }
     }
 
     private fun updateCartOnServer(updatedItems: List<CartItem>) {
@@ -100,6 +133,7 @@ class CartViewModel : ViewModel() {
             userId = userId,
             items = updatedItems.map {
                 CartItemDto(
+                    itemId = it.itemId,
                     productId = it.productId,
                     image = it.image,
                     name = it.name,
@@ -120,3 +154,5 @@ class CartViewModel : ViewModel() {
         }
     }
 }
+
+

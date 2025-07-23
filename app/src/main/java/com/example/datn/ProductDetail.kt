@@ -1,16 +1,20 @@
 package com.example.datn
 
+import android.app.Activity
+import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
@@ -22,6 +26,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,13 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.datn.ui.theme.DATNTheme
-import android.app.Activity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 
 class ProductDetail : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,6 +83,12 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
 
     var selectedSize by remember { mutableStateOf(sizes.first()) }
     var selectedColor by remember { mutableStateOf(colors.first()) }
+
+    val context = LocalContext.current
+    val viewModel: CartViewModel = viewModel()
+    val sharedPref = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPref.getString("userId", null)
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Fixed top bar with Back button and title
@@ -234,10 +240,40 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
+                // them san pham vao gio hang
+                LaunchedEffect(userId) {
+                    userId?.let { viewModel.loadCart(it) }
+                }
                 Button(
                     onClick = {
-                        // TODO: Thêm vào giỏ hàng
+                        val id = product.id
+                        if (userId != null && !id.isNullOrEmpty()) {
+                            val itemId = "${id}_${selectedSize}_${selectedColor}"
+
+                            val cartItem = CartItem(
+                                itemId = itemId,
+                                productId = id,
+                                name = product.name,
+                                image = product.image,
+                                price = product.price,
+                                quantity = 1,
+                                size = selectedSize,
+                                color = selectedColor
+                            )
+
+                            viewModel.addToCart(cartItem)
+                            Toast.makeText(context, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
+
+                        } else {
+                            Toast.makeText(context, "Bạn chưa đăng nhập hoặc sản phẩm lỗi", Toast.LENGTH_SHORT).show()
+                        }
                     },
+
+
+
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -245,6 +281,7 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm vào giỏ hàng", color = Color.White)
                 }
+
             }
         }
     }

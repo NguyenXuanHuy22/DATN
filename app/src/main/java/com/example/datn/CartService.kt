@@ -8,7 +8,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface CartService {
-    @GET("carts") // <-- sửa "cart" thành "carts"
+    @GET("carts")
     suspend fun getCartByUserId(@Query("userId") userId: String): List<CartResponse>
 
     @PATCH("carts/{cartId}")
@@ -18,6 +18,6 @@ interface CartService {
     )
 
     @POST("carts")
-    suspend fun createCart(@Body newCart: CartResponse)
+    suspend fun createCart(@Body newCart: CartCreateRequest): CartResponse
 
 }

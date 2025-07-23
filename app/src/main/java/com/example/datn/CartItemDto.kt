@@ -1,6 +1,7 @@
 package com.example.datn
 
 data class CartItemDto(
+    val itemId: String,
     val productId: String,
     val image: String,
     val name: String,
@@ -12,6 +13,7 @@ data class CartItemDto(
 
 fun CartItemDto.toCartItem(): CartItem {
     return CartItem(
+        itemId = itemId,
         productId = productId,
         image = image,
         name = name,

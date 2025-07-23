@@ -72,7 +72,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
     val shippingFee by viewModel.shippingFee.collectAsState()
     val grandTotal by viewModel.grandTotal.collectAsState()
 
-
     Scaffold(
         bottomBar = {
             Column {
@@ -90,7 +89,7 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = selectedItems.isNotEmpty() // disable khi chưa chọn gì
+                        enabled = selectedItems.isNotEmpty()
                     ) {
                         Text("Đặt hàng")
                     }
@@ -98,7 +97,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                 BottomNavigationBarCart(currentScreen = "Cart")
             }
         }
-
     ) { padding ->
         when {
             errorMessage != null -> {
@@ -127,12 +125,12 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     items(cartItems) { item ->
                         CartItemRow(
                             item = item,
-                            isSelected = selectedItems.contains(item.productId),
-                            onToggleSelect = { viewModel.toggleItemSelection(item.productId) },
-                            onDelete = { viewModel.deleteItem(userId, item.productId) },
+                            isSelected = selectedItems.contains(item.itemId),
+                            onToggleSelect = { viewModel.toggleItemSelection(item.itemId) },
+                            onDelete = { viewModel.deleteItem(item.itemId) },
                             onQuantityChange = { newQty ->
                                 scope.launch {
-                                    viewModel.updateItemQuantity(userId, item.productId, newQty)
+                                    viewModel.updateItemQuantity(userId, item.itemId, newQty)
                                 }
                             }
                         )
@@ -142,7 +140,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         }
     }
 }
-
 
 
 @Composable

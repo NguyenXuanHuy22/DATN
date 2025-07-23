@@ -106,6 +106,8 @@ fun AccountScreen() {
                 // banner của admin
                 AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý banner") {
                     Toast.makeText(context, "Quản lý banner", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(context, BannerManager::class.java)
+                    context.startActivity(intent)
                 }
                 Divider()
             }
