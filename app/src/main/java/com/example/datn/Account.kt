@@ -8,20 +8,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 class Account : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,11 +43,38 @@ class Account : ComponentActivity() {
 fun AccountScreen() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-    val userRole = remember { mutableStateOf("") }
 
-    //  Load role từ SharedPreferences khi màn hình khởi tạo
+    var showEditDialog by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    val userRole = remember { mutableStateOf("") }
+    val userId = sharedPreferences.getString("userId", "") ?: ""
+    val scope = rememberCoroutineScope()
+
+    // Lấy thông tin người dùng
     LaunchedEffect(Unit) {
-        userRole.value = sharedPreferences.getString("userRole", "") ?: ""
+        if (userId.isNotEmpty()) {
+            try {
+                val response = RetrofitClient.apiService.getUsers()
+                if (response.isSuccessful) {
+                    response.body()?.firstOrNull { it.id == userId }?.let { user ->
+                        name = user.name
+                        email = user.email
+                        phone = user.phone
+                        address = user.address
+                        imageUrl = user.avatar
+                        password = user.password
+                        userRole.value = user.role
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Lỗi tải thông tin: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     Scaffold(
@@ -66,79 +97,119 @@ fun AccountScreen() {
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            //  - chức năng cá nhân
-            if(userRole.value != "admin"){
-                AccountMenuItem(icon = Icons.Default.Inventory, label = "Đơn hàng của tôi") {
-                    Toast.makeText(context, "Đơn hàng của tôi", Toast.LENGTH_SHORT).show()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(text = name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text(text = email, fontSize = 14.sp, color = Color.Gray)
                 }
-                Divider()
-                AccountMenuItem(icon = Icons.Default.Person, label = "Thông tin cá nhân") {
-                    Toast.makeText(context, "Thông tin cá nhân", Toast.LENGTH_SHORT).show()
-                }
-                Divider()
-                AccountMenuItem(icon = Icons.Default.Home, label = "Địa chỉ") {
-                    Toast.makeText(context, "Địa chỉ", Toast.LENGTH_SHORT).show()
-                }
-                Divider()
-                AccountMenuItem(icon = Icons.Outlined.FavoriteBorder, label = "Sản phẩm yêu thích") {
-                    Toast.makeText(context, "Sản phẩm yêu thích", Toast.LENGTH_SHORT).show()
-                }
-                Divider()
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+            Divider()
 
-            //  Mục admin - chỉ hiện nếu là admin
+            AccountMenuItem(icon = Icons.Default.Edit, label = "Chỉnh sửa thông tin") {
+                showEditDialog = true
+            }
+            Divider()
+
             if (userRole.value == "admin") {
-                AccountMenuItem(icon = Icons.Default.ProductionQuantityLimits, label = "Quản lý sản phẩm") {
-                    Toast.makeText(context, "Quản lý sản phẩm", Toast.LENGTH_SHORT).show()
-                }
+                AccountMenuItem(icon = Icons.Default.ProductionQuantityLimits, label = "Quản lý sản phẩm") {}
                 Divider()
-                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Quản lý đơn hàng") {
-                    Toast.makeText(context, "Quản lý đơn hàng", Toast.LENGTH_SHORT).show()
-                }
+                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Quản lý đơn hàng") {}
                 Divider()
-                AccountMenuItem(icon = Icons.Default.RealEstateAgent, label = "Doanh thu") {
-                    Toast.makeText(context, "Doanh thu", Toast.LENGTH_SHORT).show()
-                }
+                AccountMenuItem(icon = Icons.Default.RealEstateAgent, label = "Doanh thu") {}
                 Divider()
-                // banner của admin
                 AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý banner") {
-                    Toast.makeText(context, "Quản lý banner", Toast.LENGTH_SHORT).show()
                     val intent = Intent(context, BannerManager::class.java)
                     context.startActivity(intent)
                 }
                 Divider()
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Divider(thickness = 8.dp, color = Color.LightGray)
 
-            //  Hỗ trợ
-            AccountMenuItem(icon = Icons.Outlined.Info, label = "Câu hỏi trợ giúp") {
-                Toast.makeText(context, "Câu hỏi trợ giúp", Toast.LENGTH_SHORT).show()
-            }
-            Divider()
-            AccountMenuItem(icon = Icons.Outlined.HeadsetMic, label = "Trung tâm hỗ trợ") {
-                Toast.makeText(context, "Trung tâm hỗ trợ", Toast.LENGTH_SHORT).show()
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Divider(thickness = 8.dp, color = Color.LightGray)
-
-            //  Đăng xuất
-            AccountMenuItem(
-                icon = Icons.Default.Logout,
-                label = "Đăng xuất",
-                color = Color.Red
-            ) {
+            AccountMenuItem(icon = Icons.Default.Logout, label = "Đăng xuất", color = Color.Red) {
                 sharedPreferences.edit().clear().apply()
                 Toast.makeText(context, "Đăng xuất", Toast.LENGTH_SHORT).show()
-
                 val intent = Intent(context, LoginScreen::class.java)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 context.startActivity(intent)
+            }
+
+            // Dialog chỉnh sửa thông tin
+            if (showEditDialog) {
+                AlertDialog(
+                    onDismissRequest = { showEditDialog = false },
+                    title = { Text("Chỉnh sửa thông tin") },
+                    text = {
+                        Column {
+                            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Link ảnh đại diện") })
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Họ và tên") })
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") })
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") })
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = { Text("Mật khẩu") },
+                                visualTransformation = PasswordVisualTransformation()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            if (userId.isNotEmpty()) {
+                                val updatedUser = User(
+                                    id = userId,
+                                    name = name,
+                                    email = email,
+                                    phone = phone,
+                                    password = password,
+                                    address = address,
+                                    avatar = imageUrl,
+                                    role = userRole.value
+                                )
+
+                                scope.launch {
+                                    try {
+                                        val response = RetrofitClient.apiService.updateUser(userId, updatedUser)
+                                        if (response.isSuccessful) {
+                                            Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
+                                            showEditDialog = false
+                                        } else {
+                                            Toast.makeText(context, "Lỗi cập nhật", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Lỗi mạng: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }) {
+                            Text("Lưu")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showEditDialog = false }) {
+                            Text("Hủy")
+                        }
+                    }
+                )
             }
         }
     }
@@ -158,33 +229,20 @@ fun AccountMenuItem(
             .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = color,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(imageVector = icon, contentDescription = label, tint = color, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = label,
-            fontWeight = FontWeight.Normal,
-            color = color,
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Text(text = label, fontWeight = FontWeight.Normal, color = color, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
 fun BottomNavigationBarr(currentScreen: String) {
     val context = LocalContext.current
-
     BottomNavigation(
         backgroundColor = Color.White,
         contentColor = Color.Black,
         elevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
+        modifier = Modifier.fillMaxWidth().height(48.dp)
     ) {
         val items = listOf(
             Triple("Home", Icons.Default.Home, Home::class.java),
@@ -198,7 +256,6 @@ fun BottomNavigationBarr(currentScreen: String) {
             BottomNavigationItem(
                 selected = currentScreen == label,
                 onClick = {
-                    // 👉 Khi click chuyển sang màn mới nếu chưa phải màn hiện tại
                     if (currentScreen != label) {
                         context.startActivity(Intent(context, activityClass))
                     }
@@ -208,7 +265,6 @@ fun BottomNavigationBarr(currentScreen: String) {
                         imageVector = icon,
                         contentDescription = label,
                         modifier = Modifier.size(20.dp),
-                        // 👉 Sửa tại đây: Nếu được chọn thì icon màu đen, không thì màu xám
                         tint = if (currentScreen == label) Color.Black else Color.Gray
                     )
                 },
@@ -216,7 +272,6 @@ fun BottomNavigationBarr(currentScreen: String) {
                     Text(
                         text = label,
                         fontSize = 10.sp,
-                        // 👉 Sửa tại đây: Nếu được chọn thì chữ màu đen, không thì màu xám
                         color = if (currentScreen == label) Color.Black else Color.Gray
                     )
                 }
@@ -224,5 +279,3 @@ fun BottomNavigationBarr(currentScreen: String) {
         }
     }
 }
-
-

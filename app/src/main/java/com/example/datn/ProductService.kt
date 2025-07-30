@@ -17,6 +17,13 @@ interface ProductService {
     @GET("users")
     suspend fun getUsers(): Response<List<User>>
 
+    @PUT("users/{id}")
+    suspend fun updateUser(
+        @Path("id") id: String,
+        @Body user: User
+    ): Response<User>
+
+
     @POST("users")
     suspend fun createUser(@Body user: User): Response<User>
 

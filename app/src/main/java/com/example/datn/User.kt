@@ -7,5 +7,8 @@ data class User(
     val password: String,
     val phone: String,
     val address: String,
+    val avatar: String = "", // mặc định là rỗng
     val role: String
 )
+
+
