@@ -1,0 +1,432 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "name": "Nguyễn Văn A",
+      "email": "admin1@gmail.com",
+      "phone": "0987654321",
+      "password": "123456",
+      "address": "Hà Nội",
+      "avatar": "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg",
+      "role": "admin"
+    },
+    {
+      "id": "QZsU2tCy",
+      "name": "huyhuy",
+      "email": "huynxph52088@gmail.com",
+      "phone": "0987654321",
+      "password": "123456",
+      "address": "Thái Bình",
+      "avatar": "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg",
+      "role": "user"
+    },
+    {
+      "address": "nguyên xá",
+      "avatar": "https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/06/anh-messi-4K-2.jpg",
+      "email": "huycoi1293@gmail.com",
+      "id": "k3osGIKG",
+      "name": "huy111",
+      "password": "123456",
+      "phone": "0975830708",
+      "role": "user"
+    },
+    {
+      "id": "esJ-EyFN",
+      "address": "xóm 3",
+      "email": "huy2005@gmail.com",
+      "name": "huy2005",
+      "password": "12345678",
+      "phone": "123456789",
+      "avatar": "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg",
+      "role": "user"
+    }
+  ],
+  "wishlists": [
+    {
+      "id": "1",
+      "userId": "1",
+      "items": [
+        {
+          "productId": "1",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 359000
+        }
+      ]
+    },
+    {
+      "id": "ndd_WJ3U",
+      "userId": "QZsU2tCy",
+      "items": [
+        {
+          "productId": "1",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 359000
+        }
+      ]
+    },
+    {
+      "id": "qU4gw9zT",
+      "items": [],
+      "userId": "k3osGIKG"
+    },
+    {
+      "id": "BtWqaD_F",
+      "items": [],
+      "userId": "esJ-EyFN"
+    }
+  ],
+  "carts": [
+    {
+      "id": "1",
+      "items": [
+        {
+          "productId": "1",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 219000,
+          "quantity": 2,
+          "size": "M",
+          "color": "Đen"
+        }
+      ],
+      "userId": "1"
+    },
+    {
+      "id": "NsLpwL8V",
+      "items": [
+        {
+          "color": "Đen",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "itemId": "1_S_Đen",
+          "name": "Áo Singlet chạy bộ Advanced Vent Tech Graphic Camo",
+          "price": 219000,
+          "productId": "1",
+          "quantity": 5,
+          "size": "S"
+        },
+        {
+          "color": "Trắng",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "itemId": "1_L_Trắng",
+          "name": "Áo Singlet chạy bộ Advanced Vent Tech Graphic Camo",
+          "price": 219000,
+          "productId": "1",
+          "quantity": 6,
+          "size": "L"
+        }
+      ],
+      "userId": "QZsU2tCy"
+    },
+    {
+      "id": "sxMjttb5",
+      "items": [
+        {
+          "color": "Đen",
+          "image": "https://product.hstatic.net/1000341630/product/artboard_1_21349eb531ba43a5963afb287ecb580b_master.jpg",
+          "itemId": "3_S_Đen",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 359000,
+          "productId": "3",
+          "quantity": 1,
+          "size": "S"
+        },
+        {
+          "color": "Trắng",
+          "image": "https://product.hstatic.net/1000341630/product/artboard_1_21349eb531ba43a5963afb287ecb580b_master.jpg",
+          "itemId": "3_L_Trắng",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 359000,
+          "productId": "3",
+          "quantity": 1,
+          "size": "L"
+        }
+      ],
+      "userId": "k3osGIKG"
+    },
+    {
+      "id": "nvZWZ56a",
+      "items": [
+        {
+          "color": "Đen",
+          "image": "https://product.hstatic.net/1000341630/product/artboard_1_21349eb531ba43a5963afb287ecb580b_master.jpg",
+          "itemId": "3_S_Đen",
+          "name": "Bộ bóng đá Kamito Prematch HAGL",
+          "price": 359000,
+          "productId": "3",
+          "quantity": 1,
+          "size": "S"
+        },
+        {
+          "color": "Đen",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "itemId": "1_S_Đen",
+          "name": "Áo Singlet chạy bộ Advanced Vent Tech Graphic Camo",
+          "price": 219000,
+          "productId": "1",
+          "quantity": 1,
+          "size": "S"
+        },
+        {
+          "color": "Trắng",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "itemId": "1_M_Trắng",
+          "name": "Áo Singlet chạy bộ Advanced Vent Tech Graphic Camo",
+          "price": 219000,
+          "productId": "1",
+          "quantity": 1,
+          "size": "M"
+        }
+      ],
+      "userId": "esJ-EyFN"
+    }
+  ],
+  "orders": [
+    {
+      "id": "1",
+      "userId": "1",
+      "total": 400000,
+      "status": "Đã giao",
+      "items": [
+        {
+          "orderDetailId": "1",
+          "productId": "1",
+          "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+          "price": 200000,
+          "quantity": 2,
+          "size": "M",
+          "color": "Đen",
+          "subtotal": 400000,
+          "date": "2024-05-30"
+        }
+      ]
+    },
+    {
+      "id": "FB-_E1bm",
+      "userId": "QZsU2tCy",
+      "total": 0,
+      "status": "Chưa có đơn hàng",
+      "items": []
+    },
+    {
+      "id": "pLW3ZG6J",
+      "status": "Chưa có đơn hàng",
+      "total": 0,
+      "userId": "k3osGIKG",
+      "items": []
+    },
+    {
+      "id": "NMw-eLmp",
+      "items": [],
+      "status": "Chưa có đơn hàng",
+      "total": 0,
+      "userId": "esJ-EyFN"
+    }
+  ],
+  "comments": [
+    {
+      "id": "1",
+      "userId": "1",
+      "productId": "1",
+      "avatar": "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg",
+      "username": "Nguyễn Văn A",
+      "ratingStar": 4,
+      "commentDes": "Sản phẩm chất lượng tốt, giao hàng nhanh!"
+    },
+    {
+      "id": "2",
+      "userId": "QZsU2tCy",
+      "productId": "2",
+      "avatar": "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg",
+      "username": "huyhuy",
+      "ratingStar": 5,
+      "commentDes": "Rất hài lòng với áo này!"
+    }
+  ],
+  "products": [
+    {
+      "id": "1",
+      "category": "Áo thể thao",
+      "name": "Áo Singlet chạy bộ Advanced Vent Tech Graphic Camo",
+      "price": 219000,
+      "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/April2025/ao-singlet-chay-bo-advanced-vent-techgraphic-camo-448do-nau_74.jpg",
+      "description": "Công nghệ:Ex-Dry Chất liệu Mặt trước: 100% Polyester Mặt sau: 90% Polyester 10% Spandex...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đen",
+          "quantity": 5
+        },
+        {
+          "size": "S",
+          "color": "Trắng",
+          "quantity": 5
+        },
+        {
+          "size": "M",
+          "color": "Đen",
+          "quantity": 10
+        },
+        {
+          "size": "M",
+          "color": "Trắng",
+          "quantity": 10
+        },
+        {
+          "size": "M",
+          "color": "Đỏ",
+          "quantity": 10
+        },
+        {
+          "size": "L",
+          "color": "Trắng",
+          "quantity": 10
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "category": "Áo thể thao",
+      "name": "T-shirt thể thao nam Promax Sideflow V-neck",
+      "price": 200000,
+      "image": "https://media3.coolmate.me/cdn-cgi/image/quality=80,format=auto/uploads/May2025/t-shirt-the-thao-nam-promax-sideflow-v-neck-1-xanh-bong-dem_18.jpg",
+      "description": "Phù hợp Tập luyện thể thao và mặc thường ngày...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đen",
+          "quantity": 10
+        },
+        {
+          "size": "M",
+          "color": "Trắng",
+          "quantity": 15
+        },
+        {
+          "size": "L",
+          "color": "Đỏ",
+          "quantity": 12
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "category": "Bộ bóng đá",
+      "name": "Bộ bóng đá Kamito Prematch HAGL",
+      "price": 359000,
+      "image": "https://product.hstatic.net/1000341630/product/artboard_1_21349eb531ba43a5963afb287ecb580b_master.jpg",
+      "description": "Bộ bóng đá Kamito Prematch Vleague được thiết kế với họa tiết bắt mắt...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đen",
+          "quantity": 8
+        },
+        {
+          "size": "M",
+          "color": "Trắng",
+          "quantity": 14
+        },
+        {
+          "size": "L",
+          "color": "Đỏ",
+          "quantity": 7
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "category": "Bộ bóng đá",
+      "name": "Bộ bóng đá Kamito TL79",
+      "price": 299000,
+      "image": "https://product.hstatic.net/1000341630/product/kamito14024_32e3bcc59c3b4ce28e4badf99212632a_master.jpg",
+      "description": "Bộ bóng đá Kamito TL79 được làm từ 95% poly + 5% Spandex...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đỏ",
+          "quantity": 6
+        },
+        {
+          "size": "M",
+          "color": "Đen",
+          "quantity": 10
+        },
+        {
+          "size": "L",
+          "color": "Trắng",
+          "quantity": 9
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "category": "Bộ bóng đá",
+      "name": "Quần Áo Bóng Đá Thiết Kế RO-25",
+      "price": 119000,
+      "image": "https://rozaco.vn/wp-content/uploads/2025/02/MauDaSanXuat-AoBongDa-25-800x800.jpg",
+      "description": "Áo bóng đá thiết kế màu đỏ là sự kết hợp hoàn hảo...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đen",
+          "quantity": 15
+        },
+        {
+          "size": "M",
+          "color": "Trắng",
+          "quantity": 15
+        },
+        {
+          "size": "L",
+          "color": "Đỏ",
+          "quantity": 5
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "category": "Bộ bóng đá",
+      "name": "Mẫu Áo Đá Banh Thiết Kế RO-21",
+      "price": 200000,
+      "image": "https://rozaco.vn/wp-content/uploads/2025/02/MauDaSanXuat-AoBongDa-20-800x800.jpg",
+      "description": "Đừng để đội bóng của bạn trở nên đơn điệu!...",
+      "variants": [
+        {
+          "size": "S",
+          "color": "Đen",
+          "quantity": 7
+        },
+        {
+          "size": "M",
+          "color": "Trắng",
+          "quantity": 10
+        },
+        {
+          "size": "L",
+          "color": "Đỏ",
+          "quantity": 10
+        }
+      ]
+    }
+  ],
+  "banner": [
+    {
+      "id": "1",
+      "image": "https://i.pinimg.com/736x/fd/a4/2f/fda42f66fca6afafa9b205d5621d0ce1.jpg"
+    },
+    {
+      "id": "2",
+      "image": "https://i.pinimg.com/736x/86/71/80/8671803d0d62faabf4501d923e1de020.jpg"
+    },
+    {
+      "id": "3",
+      "image": "https://i.pinimg.com/736x/c4/3f/79/c43f79c15d0e860075aee6e8fbc3d223.jpg"
+    },
+    {
+      "id": "a263",
+      "image": "file:///data/user/0/host.exp.exponent/cache/ExperienceData/%2540anonymous%252Fmy-app-c6b213cd-5079-4514-a833-5d3cc735d251/ImagePicker/f351b3bb-6e2e-4463-9e3b-003a205cfc22.jpeg"
+    }
+  ]
+}
