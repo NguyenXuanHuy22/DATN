@@ -117,9 +117,15 @@ fun AccountScreen() {
             Spacer(modifier = Modifier.height(24.dp))
             Divider()
 
-            AccountMenuItem(icon = Icons.Default.Edit, label = "Chỉnh sửa thông tin") {
-                showEditDialog = true
+
+
+            if (userRole.value == "user") {
+                AccountMenuItem(icon = Icons.Default.Edit, label = "Chỉnh sửa thông tin") {
+                    showEditDialog = true
+                }
+                Divider()
             }
+
             Divider()
 
             if (userRole.value == "admin") {
