@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.datn.ui.theme.DATNTheme
+import com.example.datn.utils.toDecimalString
 import kotlinx.coroutines.launch
 
 class ProductDetail : ComponentActivity() {
@@ -56,14 +57,14 @@ class ProductDetail : ComponentActivity() {
     }
 }
 
+
+
 @Composable
 fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewModel()) {
-    // Khi productId thay đổi, gọi API lấy chi tiết sản phẩm
     LaunchedEffect(productId) {
         viewModel.getProductDetail(productId)
     }
 
-    // Quan sát LiveData productDetail từ ViewModel
     val productDetail by viewModel.productDetail.observeAsState()
 
     if (productDetail == null) {
@@ -78,21 +79,21 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
 
     val product = productDetail!!
 
-    val sizes = product.sizes.ifEmpty { listOf("S", "M", "L") }
-    val colors = product.colors.ifEmpty { listOf("Đen", "Trắng", "Xanh") }
+    // Lấy size từ variants
+    val availableSizes = product.variants.map { it.size }.distinct()
+    var selectedSize by remember { mutableStateOf(availableSizes.firstOrNull() ?: "") }
 
-    var selectedSize by remember { mutableStateOf(sizes.first()) }
-    var selectedColor by remember { mutableStateOf(colors.first()) }
+    // Lấy danh sách color tương ứng với size đang chọn
+    val availableColors = product.variants.filter { it.size == selectedSize }.map { it.color }.distinct()
+    var selectedColor by remember { mutableStateOf(availableColors.firstOrNull() ?: "") }
 
     val context = LocalContext.current
-    val viewModel: CartViewModel = viewModel()
+    val cartViewModel: CartViewModel = viewModel()
     val sharedPref = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userId = sharedPref.getString("userId", null)
 
-
     Box(modifier = Modifier.fillMaxSize()) {
-        // Fixed top bar with Back button and title
-        // Quan trọng: Thanh trên cố định để luôn hiển thị nút Back và tiêu đề
+        // App bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -100,7 +101,6 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                 .padding(16.dp)
                 .align(Alignment.TopCenter)
         ) {
-            val context = LocalContext.current
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = {
                     (context as? Activity)?.finish()
@@ -115,10 +115,9 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 72.dp, start = 16.dp, end = 16.dp) // Điều chỉnh padding top để tránh che nội dung
+                .padding(top = 72.dp, start = 16.dp, end = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Quan trọng: Nội dung chính có thể cuộn để xử lý mô tả dài
             Spacer(modifier = Modifier.height(16.dp))
 
             Box(
@@ -132,97 +131,98 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                IconButton(
-                    onClick = { /* TODO: Favorite */ },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(Color.White, shape = CircleShape)
-                        .border(1.dp, Color.Gray, CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = Color.Black
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(product.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFC107))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("5.0", fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("(1 đánh giá)", color = Color.Gray, fontSize = 13.sp)
-            }
-
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Quan trọng: Mô tả sản phẩm có thể dài, hiển thị toàn bộ nội dung
-            Text(
-                text = product.description ?: "Không có mô tả",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text(text = product.description, fontSize = 14.sp, color = Color.Gray)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("Chọn size", fontWeight = FontWeight.Bold)
             Row {
-                sizes.forEach { size ->
+                availableSizes.forEach { size ->
+                    // Tổng số lượng của tất cả màu cho size này
+                    val totalQuantityForSize = product.variants
+                        .filter { it.size == size }
+                        .sumOf { it.quantity }
+
                     Box(
                         modifier = Modifier
                             .padding(end = 8.dp, top = 8.dp)
                             .border(
                                 width = 1.dp,
-                                color = if (selectedSize == size) Color.Gray else Color.Gray,
+                                color = if (selectedSize == size) Color.Black else Color.Gray,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .background(
                                 color = if (selectedSize == size) Color.LightGray else Color.White
                             )
-                            .clickable { selectedSize = size }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable {
+                                selectedSize = size
+                                selectedColor = product.variants
+                                    .filter { it.size == size }
+                                    .map { it.color }
+                                    .firstOrNull() ?: ""
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Text(text = size)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = size)
+                            Text(
+                                text = "$totalQuantityForSize cái",
+                                fontSize = 10.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("Chọn màu", fontWeight = FontWeight.Bold)
             Row {
-                colors.forEach { color ->
+                availableColors.forEach { color ->
+                    val quantityForVariant = product.variants
+                        .find { it.size == selectedSize && it.color == color }
+                        ?.quantity ?: 0
+
                     Box(
                         modifier = Modifier
                             .padding(end = 8.dp, top = 8.dp)
                             .border(
                                 width = 1.dp,
-                                color = if (selectedColor == color) Color.Gray else Color.Gray,
+                                color = if (selectedColor == color) Color.Black else Color.Gray,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .background(
                                 color = if (selectedColor == color) Color.LightGray else Color.White
                             )
-                            .clickable { selectedColor = color }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable {
+                                selectedColor = color
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Text(text = color)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = color)
+                            Text(
+                                text = "$quantityForVariant cái",
+                                fontSize = 10.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }
 
-            // Thêm khoảng trống ở dưới để nút "Thêm vào giỏ hàng" không che nội dung
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        // Fixed price and Add to Cart button at the bottom
-        // Quan trọng: Thanh dưới cố định để hiển thị giá và nút Thêm vào giỏ hàng
+        // Footer
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -236,41 +236,40 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${product.price} đ",
+                    text = "${product.price.toDecimalString()} VND",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
-                // them san pham vao gio hang
+
                 LaunchedEffect(userId) {
-                    userId?.let { viewModel.loadCart(it) }
+                    userId?.let { cartViewModel.loadCart(it) }
                 }
+
                 Button(
                     onClick = {
-                        val id = product.id
-                        if (userId != null && !id.isNullOrEmpty()) {
-                            val itemId = "${id}_${selectedSize}_${selectedColor}"
+                        val variant = product.variants.find {
+                            it.size == selectedSize && it.color == selectedColor
+                        }
 
+                        if (userId != null && variant != null) {
+                            val itemId = "${product.id}_${selectedSize}_${selectedColor}"
                             val cartItem = CartItem(
                                 itemId = itemId,
-                                productId = id,
+                                productId = product.id,
                                 name = product.name,
                                 image = product.image,
                                 price = product.price,
                                 quantity = 1,
                                 size = selectedSize,
-                                color = selectedColor
+                                color = selectedColor,
+                                maxQuantity = variant.quantity
                             )
-
-                            viewModel.addToCart(cartItem)
+                            cartViewModel.addToCart(cartItem)
                             Toast.makeText(context, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
-
                         } else {
-                            Toast.makeText(context, "Bạn chưa đăng nhập hoặc sản phẩm lỗi", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Không thể thêm sản phẩm", Toast.LENGTH_SHORT).show()
                         }
                     },
-
-
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -281,8 +280,8 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm vào giỏ hàng", color = Color.White)
                 }
-
             }
         }
     }
 }
+

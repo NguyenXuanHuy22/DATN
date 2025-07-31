@@ -7,10 +7,15 @@ data class ProductData(
     @SerializedName("category") val category: String,
     @SerializedName("name") val name: String,
     @SerializedName("price") val price: Int,
-    @SerializedName("sizes") val sizes: List<String>,
-    @SerializedName("colors") val colors: List<String>,
     @SerializedName("image") val image: String,
     @SerializedName("description") val description: String,
+    @SerializedName("variants") val variants: List<ProductVariantData>
+)
+
+data class ProductVariantData(
+    @SerializedName("size") val size: String,
+    @SerializedName("color") val color: String,
+    @SerializedName("quantity") val quantity: Int
 )
 
 fun ProductData.toProduct(): Product {
@@ -19,9 +24,10 @@ fun ProductData.toProduct(): Product {
         category = category,
         name = name,
         price = price,
-        sizes = sizes,
-        colors = colors,
         image = image,
-        description = description
+        description = description,
+        variants = variants.map {
+            ProductVariant(it.size, it.color, it.quantity)
+        }
     )
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.icons.Icons
@@ -29,8 +30,13 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.datn.ui.theme.DATNTheme
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.datn.utils.toDecimalString
 import kotlinx.coroutines.launch
+import com.example.datn.ProductRepository
+
 
 class CartScreen : ComponentActivity() {
     private val viewModel: CartViewModel by viewModels()
@@ -40,6 +46,8 @@ class CartScreen : ComponentActivity() {
 
         val sharedPref = getSharedPreferences("auth", Context.MODE_PRIVATE)
         val userId = sharedPref.getString("userId", null)
+        val productRepository = ProductRepository() // tạo instance
+
         Log.d("CartScreen", "USER_ID_DEBUG: $userId")
 
         if (userId.isNullOrEmpty()) {
@@ -68,7 +76,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         viewModel.loadCart(userId)
     }
 
-    val totalPrice by viewModel.totalPrice.collectAsState()
     val shippingFee by viewModel.shippingFee.collectAsState()
     val grandTotal by viewModel.grandTotal.collectAsState()
 
@@ -76,9 +83,11 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         bottomBar = {
             Column {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Tạm tính: $totalPrice VND")
-                    Text("Phí vận chuyển: $shippingFee VND")
-                    Text("Tổng cộng: $grandTotal VND", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (shippingFee == 0) "Phí vận chuyển: Miễn phí cho đơn trên 500k"
+                        else "Phí vận chuyển: ${shippingFee.toDecimalString()} VND"
+                    )
+                    Text("Tổng cộng: ${grandTotal.toDecimalString()} VND", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
@@ -141,7 +150,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
     }
 }
 
-
 @Composable
 fun CartItemRow(
     item: CartItem,
@@ -150,48 +158,114 @@ fun CartItemRow(
     onDelete: () -> Unit,
     onQuantityChange: (Int) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Checkbox(
-            checked = isSelected,
-            onCheckedChange = { onToggleSelect() },
-            modifier = Modifier.align(Alignment.CenterVertically)
-        )
-        Image(
-            painter = rememberAsyncImagePainter(item.image),
-            contentDescription = item.name,
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val productRepository = ProductRepository()
+
+    Column {
+        Row(
             modifier = Modifier
-                .size(90.dp)
-                .padding(end = 12.dp),
-            contentScale = ContentScale.Crop
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.name, fontWeight = FontWeight.Bold)
-            Text("Size: ${item.size} | Màu: ${item.color}")
-            Text("Giá: ${item.price} VND")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = {
-                    if (item.quantity > 1) onQuantityChange(item.quantity - 1)
-                }) {
-                    Icon(Icons.Default.Remove, contentDescription = "Giảm số lượng")
-                }
-                Text("${item.quantity}", modifier = Modifier.padding(horizontal = 4.dp))
-                IconButton(onClick = {
-                    onQuantityChange(item.quantity + 1)
-                }) {
-                    Icon(Icons.Default.Add, contentDescription = "Tăng số lượng")
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Checkbox chọn sản phẩm
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onToggleSelect() }
+            )
+
+            // Ảnh sản phẩm
+            Image(
+                painter = rememberAsyncImagePainter(item.image),
+                contentDescription = item.name,
+                modifier = Modifier
+                    .size(90.dp)
+                    .padding(end = 12.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
+                // Tên sản phẩm (giới hạn 1 dòng)
+                Text(
+                    text = item.name,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Size và màu
+                Text(
+                    text = "Size: ${item.size} | Màu: ${item.color}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                // Giá sản phẩm
+                Text(
+                    text = "Giá: ${item.price.toDecimalString()} VND",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFe53935),
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Tăng/giảm số lượng
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        if (item.quantity > 1) {
+                            onQuantityChange(item.quantity - 1)
+                        } else {
+                            onDelete()
+                        }
+                    }) {
+                        Icon(Icons.Default.Remove, contentDescription = "Giảm số lượng")
+                    }
+
+                    Text(
+                        "${item.quantity}",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    IconButton(onClick = {
+                        scope.launch {
+                            try {
+                                val maxQty = productRepository.getMaxQuantity(item.productId, item.size, item.color)
+                                if (item.quantity < maxQty) {
+                                    onQuantityChange(item.quantity + 1)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Đã đạt số lượng tối đa ($maxQty)",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Lỗi kiểm tra số lượng", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Tăng số lượng")
+                    }
                 }
             }
+
+            // Nút xóa
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Outlined.Delete, contentDescription = "Xóa", tint = Color.Red)
+            }
         }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Outlined.Delete, contentDescription = "Xóa")
-        }
+
+        // ✅ Đường kẻ xám mờ dưới mỗi item
+        Divider(color = Color.LightGray, thickness = 1.dp)
     }
 }
+
+
+
 
 
 @Composable

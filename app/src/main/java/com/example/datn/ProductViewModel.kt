@@ -39,8 +39,9 @@ class ProductViewModel : ViewModel() {
             isLoading.postValue(true)
             try {
                 val response = RetrofitClient.apiService.getProduct(productId)
-                if (response.isSuccessful) {
-                    productDetail.postValue(response.body())
+                val body = response.body()
+                if (response.isSuccessful && body != null) {
+                    productDetail.postValue(body)
                     error.postValue(null)
                 } else {
                     error.postValue("Lỗi ${response.code()}: ${response.message()} (productId: $productId)")
@@ -55,4 +56,5 @@ class ProductViewModel : ViewModel() {
             }
         }
     }
+
 }

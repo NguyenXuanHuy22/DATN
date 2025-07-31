@@ -8,5 +8,6 @@ data class CartItem(
     val price: Int,
     val quantity: Int,
     val size: String,
-    val color: String
+    val color: String,
+    val maxQuantity: Int
 )

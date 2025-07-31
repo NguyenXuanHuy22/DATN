@@ -227,10 +227,8 @@ fun RegisterScreenContent() {
                                         password = password,
                                         phone = phone,
                                         address = address,
-                                        avatar = "", // ✅ Thêm dòng này
                                         role = "user"
                                     )
-
 
                                     val newCart = Cart(id = cartId, userId = userId, items = emptyList())
                                     val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())

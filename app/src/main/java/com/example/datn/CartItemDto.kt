@@ -20,7 +20,8 @@ fun CartItemDto.toCartItem(): CartItem {
         price = price,
         size = size,
         color = color,
-        quantity = quantity
+        quantity = quantity,
+        maxQuantity = 0
     )
 }
 
