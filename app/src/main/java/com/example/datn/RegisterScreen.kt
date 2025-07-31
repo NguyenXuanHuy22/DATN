@@ -229,6 +229,7 @@ fun RegisterScreenContent() {
                                         address = address,
                                         role = "user"
                                     )
+                                    // test
 
                                     val newCart = Cart(id = cartId, userId = userId, items = emptyList())
                                     val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())
