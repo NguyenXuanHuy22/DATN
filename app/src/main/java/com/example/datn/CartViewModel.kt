@@ -29,30 +29,34 @@ class CartViewModel : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     val shippingFee: StateFlow<Int> = totalPrice.map {
-        if (it > 0) 30000 else 0
+        if (it >= 500_000) 0 else 30_000
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     val grandTotal: StateFlow<Int> = combine(totalPrice, shippingFee) { total, ship ->
         total + ship
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
+
     fun loadCart(userId: String) {
         currentUserId = userId
         viewModelScope.launch {
             try {
                 val cartList = RetrofitClient.cartService.getCartByUserId(userId)
+
                 if (cartList.isNotEmpty()) {
                     val cart = cartList.first()
                     currentCartId = cart.id
                     _cartItems.value = cart.items.map { it.toCartItem() }
                     _errorMessage.value = null
                 } else {
-                    val newCart = CartCreateRequest(userId, emptyList())
+                    val newCart = CartCreateRequest(userId = userId, items = emptyList())
                     val createdCart = RetrofitClient.cartService.createCart(newCart)
+
                     currentCartId = createdCart.id
                     _cartItems.value = emptyList()
                     _errorMessage.value = null
                 }
+
             } catch (e: Exception) {
                 _cartItems.value = emptyList()
                 _errorMessage.value = when (e) {

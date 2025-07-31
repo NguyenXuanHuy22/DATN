@@ -31,7 +31,9 @@ import androidx.compose.material3.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.datn.utils.toDecimalString
 
 class Home : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +58,17 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
         viewModel.getListProducts()
     }
 
+    // Tạo danh sách danh mục tự động từ productList
+    val categories = remember(productList) {
+        listOf("Tất cả") + productList.map { it.category }.distinct()
+    }
+
+    // Lọc sản phẩm theo danh mục và tìm kiếm
+    val filteredProducts = productList.filter {
+        (selectedCategory == "Tất cả" || it.category == selectedCategory) &&
+                it.name.contains(searchText, ignoreCase = true)
+    }
+
     Scaffold(
         bottomBar = { BottomNavigationBar(currentScreen = "Home") }
     ) { innerPadding ->
@@ -67,7 +80,6 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🔍 Thanh tìm kiếm
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
@@ -86,8 +98,7 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 📂 Danh mục
-            val categories = listOf("Tất cả", "Bóng đá", "Cầu lông")
+            // Danh mục động
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(categories.size) { index ->
                     val category = categories[index]
@@ -110,16 +121,13 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 🛍️ Danh sách sản phẩm
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(productList.filter {
-                    it.name.contains(searchText, ignoreCase = true)
-                }) { product ->
+                items(filteredProducts) { product ->
                     ProductItem(product = product) {
                         val intent = Intent(context, ProductDetail::class.java)
                         intent.putExtra("productId", product.id)
@@ -132,34 +140,61 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 }
 
 
+
 @Composable
-fun ProductItem(product: Product, onClick: () -> Unit) {
-    Column(
+fun ProductItem(
+    product: Product,
+    onClick: () -> Unit
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .padding(4.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(product.image)
-                .crossfade(true)
-                .build(),
-            contentDescription = product.name,
+        Column(
             modifier = Modifier
-                .height(150.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Text(
-            text = product.name,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        Text(text = "${product.price} vnd", color = Color.Gray)
+                .padding(8.dp)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(product.image)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = product.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = product.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "${product.price.toDecimalString()} VND",
+                color = Color(0xFFe53935),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }
+
+
 
 @Composable
 fun BottomNavigationBar(currentScreen: String) {

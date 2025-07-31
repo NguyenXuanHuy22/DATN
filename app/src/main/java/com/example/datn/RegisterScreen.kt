@@ -227,7 +227,8 @@ fun RegisterScreenContent() {
                                         password = password,
                                         phone = phone,
                                         address = address,
-                                        role = "user"
+                                        role = "user",
+                                        avatar = "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg"
                                     )
 
                                     val newCart = Cart(id = cartId, userId = userId, items = emptyList())
