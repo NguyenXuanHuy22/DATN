@@ -22,7 +22,11 @@ interface ProductService {
     suspend fun updateUser(
         @Path("id") id: String,
         @Body user: User
-    ): Response<User>
+    ): Response<Unit>
+
+
+    @GET("users/{id}")
+    suspend fun getUserById(@Path("id") id: String): User
 
 
     @POST("users")

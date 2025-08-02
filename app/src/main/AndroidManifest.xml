@@ -71,6 +71,11 @@
             android:label="Account"
             android:theme="@style/Theme.DATN" />
         <activity
+            android:name=".EditProfile"
+            android:exported="false"
+            android:label="EditProfile"
+            android:theme="@style/Theme.DATN" />
+        <activity
             android:name=".IntroScreen"
             android:exported="false"
             android:label="@string/title_activity_intro_screen"
