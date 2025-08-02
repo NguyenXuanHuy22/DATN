@@ -118,22 +118,24 @@ fun AccountScreen() {
             Divider()
 
             AccountMenuItem(icon = Icons.Default.Edit, label = "Chỉnh sửa thông tin") {
-                showEditDialog = true
+                val intent = Intent(context, EditProfile::class.java)
+                context.startActivity(intent)
             }
             Divider()
 
-            if (userRole.value == "admin") {
-                AccountMenuItem(icon = Icons.Default.ProductionQuantityLimits, label = "Quản lý sản phẩm") {}
-                Divider()
-                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Quản lý đơn hàng") {}
-                Divider()
-                AccountMenuItem(icon = Icons.Default.RealEstateAgent, label = "Doanh thu") {}
-                Divider()
-                AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý banner") {
-                    val intent = Intent(context, BannerManager::class.java)
+            if (userRole.value == "user") {
+
+                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Lịch sử mua hàng") {
+                    val intent = Intent(context, OrderHistoryScreen::class.java)
                     context.startActivity(intent)
                 }
                 Divider()
+                AccountMenuItem(icon = Icons.Default.ShoppingCart, label = "Giỏ hàng") {
+                    val intent = Intent(context, CartScreen::class.java)
+                    context.startActivity(intent)
+                }
+                Divider()
+
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -148,70 +150,70 @@ fun AccountScreen() {
             }
 
             // Dialog chỉnh sửa thông tin
-            if (showEditDialog) {
-                AlertDialog(
-                    onDismissRequest = { showEditDialog = false },
-                    title = { Text("Chỉnh sửa thông tin") },
-                    text = {
-                        Column {
-                            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Link ảnh đại diện") })
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Họ và tên") })
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") })
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") })
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = password,
-                                onValueChange = { password = it },
-                                label = { Text("Mật khẩu") },
-                                visualTransformation = PasswordVisualTransformation()
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            if (userId.isNotEmpty()) {
-                                val updatedUser = User(
-                                    id = userId,
-                                    name = name,
-                                    email = email,
-                                    phone = phone,
-                                    password = password,
-                                    address = address,
-                                    avatar = imageUrl,
-                                    role = userRole.value
-                                )
-                                // tét
-
-                                scope.launch {
-                                    try {
-                                        val response = RetrofitClient.apiService.updateUser(userId, updatedUser)
-                                        if (response.isSuccessful) {
-                                            Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
-                                            showEditDialog = false
-                                        } else {
-                                            Toast.makeText(context, "Lỗi cập nhật", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Lỗi mạng: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
-                        }) {
-                            Text("Lưu")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showEditDialog = false }) {
-                            Text("Hủy")
-                        }
-                    }
-                )
-            }
+//            if (showEditDialog) {
+//                AlertDialog(
+//                    onDismissRequest = { showEditDialog = false },
+//                    title = { Text("Chỉnh sửa thông tin") },
+//                    text = {
+//                        Column {
+//                            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Link ảnh đại diện") })
+//                            Spacer(Modifier.height(8.dp))
+//                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Họ và tên") })
+//                            Spacer(Modifier.height(8.dp))
+//                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+//                            Spacer(Modifier.height(8.dp))
+//                            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") })
+//                            Spacer(Modifier.height(8.dp))
+//                            OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") })
+//                            Spacer(Modifier.height(8.dp))
+//                            OutlinedTextField(
+//                                value = password,
+//                                onValueChange = { password = it },
+//                                label = { Text("Mật khẩu") },
+//                                visualTransformation = PasswordVisualTransformation()
+//                            )
+//                        }
+//                    },
+//                    confirmButton = {
+//                        TextButton(onClick = {
+//                            if (userId.isNotEmpty()) {
+//                                val updatedUser = User(
+//                                    id = userId,
+//                                    name = name,
+//                                    email = email,
+//                                    phone = phone,
+//                                    password = password,
+//                                    address = address,
+//                                    avatar = imageUrl,
+//                                    role = userRole.value
+//                                )
+//                                // tét
+//
+//                                scope.launch {
+//                                    try {
+//                                        val response = RetrofitClient.apiService.updateUser(userId, updatedUser)
+//                                        if (response.isSuccessful) {
+//                                            Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
+//                                            showEditDialog = false
+//                                        } else {
+//                                            Toast.makeText(context, "Lỗi cập nhật", Toast.LENGTH_SHORT).show()
+//                                        }
+//                                    } catch (e: Exception) {
+//                                        Toast.makeText(context, "Lỗi mạng: ${e.message}", Toast.LENGTH_SHORT).show()
+//                                    }
+//                                }
+//                            }
+//                        }) {
+//                            Text("Lưu")
+//                        }
+//                    },
+//                    dismissButton = {
+//                        TextButton(onClick = { showEditDialog = false }) {
+//                            Text("Hủy")
+//                        }
+//                    }
+//                )
+//            }
         }
     }
 }

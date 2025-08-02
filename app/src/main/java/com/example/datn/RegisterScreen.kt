@@ -227,27 +227,20 @@ fun RegisterScreenContent() {
                                         password = password,
                                         phone = phone,
                                         address = address,
-                                        role = "user"
+                                        role = "user",
+                                        avatar = "https://i.pinimg.com/736x/fd/bf/6f/fdbf6fa788ed6f1a0ff9432e61393489.jpg"
                                     )
                                     // test
 
                                     val newCart = Cart(id = cartId, userId = userId, items = emptyList())
                                     val newWishlist = Wishlist(id = wishlistId, userId = userId, items = emptyList())
-                                    val newOrder = Order(
-                                        id = orderId,
-                                        userId = userId,
-                                        total = 0,
-                                        status = "Chưa có đơn hàng",
-                                        items = emptyList(),
-                                    )
 
                                     val createUserResponse = RetrofitClient.apiService.createUser(newUser)
                                     if (createUserResponse.isSuccessful) {
                                         val cartResponse = RetrofitClient.apiService.createCart(newCart)
                                         val wishlistResponse = RetrofitClient.apiService.createWishlist(newWishlist)
-                                        val orderResponse = RetrofitClient.apiService.createOrder(newOrder)
 
-                                        if (cartResponse.isSuccessful && wishlistResponse.isSuccessful && orderResponse.isSuccessful) {
+                                        if (cartResponse.isSuccessful && wishlistResponse.isSuccessful) {
                                             // Save userId to SharedPreferences
                                             context.getSharedPreferences("auth", Context.MODE_PRIVATE)
                                                 .edit()
@@ -267,7 +260,7 @@ fun RegisterScreenContent() {
                                                         when {
                                                             !cartResponse.isSuccessful -> "giỏ hàng (${cartResponse.message()})"
                                                             !wishlistResponse.isSuccessful -> "danh sách yêu thích (${wishlistResponse.message()})"
-                                                            else -> "đơn hàng (${orderResponse.message()})"
+                                                            else -> "Không xác định"
                                                         }
                                                     }",
                                                     Toast.LENGTH_LONG
