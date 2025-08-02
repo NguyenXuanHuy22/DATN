@@ -145,6 +145,7 @@ fun LoginScreenContent() {
                                     // Save userId to SharedPreferences
                                     context.getSharedPreferences("auth", Context.MODE_PRIVATE)
                                         .edit()
+                                        .clear()
                                         .putString("userId", user.id)
                                         .putString("userRole", user.role)
                                         .apply()

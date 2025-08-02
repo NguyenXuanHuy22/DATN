@@ -16,6 +16,16 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".OrderHistoryScreen"
+            android:exported="false"
+            android:label="@string/title_activity_order_history_screen"
+            android:theme="@style/Theme.DATN" />
+        <activity
+            android:name=".OrderScreen"
+            android:exported="false"
+            android:label="@string/title_activity_order_screen"
+            android:theme="@style/Theme.DATN" />
+        <activity
             android:name=".BannerManager"
             android:exported="false"
             android:label="@string/title_activity_banner_manager_screen"

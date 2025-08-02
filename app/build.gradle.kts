@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-
 }
 
 android {
@@ -105,4 +104,6 @@ dependencies {
     // Trong build.gradle (app-level)
     implementation("io.coil-kt:coil-compose:2.4.0")
 
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 }

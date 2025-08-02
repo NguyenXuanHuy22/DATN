@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.example.datn.utils.toDecimalString
 import kotlinx.coroutines.launch
 import com.example.datn.ProductRepository
+import com.google.gson.Gson
 
 
 class CartScreen : ComponentActivity() {
@@ -89,12 +90,23 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     )
                     Text("Tổng cộng: ${grandTotal.toDecimalString()} VND", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
+
                     Button(
                         onClick = {
                             if (selectedItems.isEmpty()) {
                                 Toast.makeText(context, "Vui lòng chọn sản phẩm để đặt hàng", Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "Chức năng đặt hàng đang được phát triển", Toast.LENGTH_SHORT).show()
+                                val gson = Gson()
+
+                                // ✅ Lấy danh sách CartItem đã chọn
+                                val selectedCartItems = cartItems.filter { selectedItems.contains(it.itemId) }
+                                val selectedItemsJson = gson.toJson(selectedCartItems)
+
+                                val intent = Intent(context, OrderScreen::class.java).apply {
+                                    putExtra("selectedItemsJson", selectedItemsJson)
+                                    putExtra("shippingFee", shippingFee)
+                                }
+                                context.startActivity(intent)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -102,6 +114,8 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     ) {
                         Text("Đặt hàng")
                     }
+
+
                 }
                 BottomNavigationBarCart(currentScreen = "Cart")
             }
@@ -263,10 +277,6 @@ fun CartItemRow(
         Divider(color = Color.LightGray, thickness = 1.dp)
     }
 }
-
-
-
-
 
 @Composable
 fun BottomNavigationBarCart(currentScreen: String = "Cart") {

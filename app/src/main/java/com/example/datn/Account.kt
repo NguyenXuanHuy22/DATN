@@ -128,15 +128,18 @@ fun AccountScreen() {
 
             Divider()
 
-            if (userRole.value == "admin") {
-                AccountMenuItem(icon = Icons.Default.ProductionQuantityLimits, label = "Quản lý sản phẩm") {}
+            if (userRole.value == "user") {
+                AccountMenuItem(icon = Icons.Default.ProductionQuantityLimits, label = "Lịch sử mua hàng") {
+                    val intent = Intent(context, OrderHistoryScreen::class.java)
+                    context.startActivity(intent)
+                }
                 Divider()
-                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Quản lý đơn hàng") {}
-                Divider()
-                AccountMenuItem(icon = Icons.Default.RealEstateAgent, label = "Doanh thu") {}
-                Divider()
-                AccountMenuItem(icon = Icons.Default.Category, label = "Quản lý banner") {
-                    val intent = Intent(context, BannerManager::class.java)
+//                AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Quản lý đơn hàng") {}
+//                Divider()
+//                AccountMenuItem(icon = Icons.Default.RealEstateAgent, label = "Doanh thu") {}
+//                Divider()
+                AccountMenuItem(icon = Icons.Default.ShoppingCart, label = "Giỏ hàng") {
+                    val intent = Intent(context, CartScreen::class.java)
                     context.startActivity(intent)
                 }
                 Divider()
