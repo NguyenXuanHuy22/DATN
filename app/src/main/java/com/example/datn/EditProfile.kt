@@ -137,7 +137,7 @@ fun EditProfileScreen() {
                         showDialog = false
                         scope.launch {
                             val updatedUser = User(
-                                id = userId,
+                                _id = userId,
                                 name = name.text,
                                 email = email.text,
                                 password = password.text,

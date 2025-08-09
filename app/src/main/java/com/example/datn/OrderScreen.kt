@@ -71,7 +71,7 @@ class OrderScreen : ComponentActivity() {
                         val response = RetrofitClient.apiService.getUsers()
                         if (response.isSuccessful) {
                             val users = response.body() ?: emptyList()
-                            user = users.find { it.id == userId }
+                            user = users.find { it._id == userId }
                         }
                     }
 
@@ -115,8 +115,8 @@ class OrderScreen : ComponentActivity() {
 
                                 val total = orderItems.sumOf { it.subtotal } + shippingFee
                                 val newOrder = Order(
-                                    id = UUID.randomUUID().toString(),
-                                    userId = currentUser.id,
+                                    _id = UUID.randomUUID().toString(),
+                                    userId = currentUser._id!!,
                                     total = total,
                                     status = "Chờ Xác nhận",
                                     items = orderItems
@@ -124,7 +124,7 @@ class OrderScreen : ComponentActivity() {
 
                                 CoroutineScope(Dispatchers.IO).launch {
                                     try {
-                                        val response = RetrofitClient.apiService.addOrder(newOrder)
+                                        val response = RetrofitClient.apiService.createOrder(newOrder)
                                         if (response.isSuccessful) {
                                             selectedItems.forEach {
                                                 RetrofitClient.apiService.deleteCartItemById(it.itemId)

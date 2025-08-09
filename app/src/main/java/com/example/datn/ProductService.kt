@@ -9,68 +9,74 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ProductService {
-    @GET("products")
+    @GET("api/products")
     suspend fun getListProducts(): Response<List<ProductData>>
 
-    @GET("products/{id}")
+    @GET("api/products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductData>
 
-    @GET("users")
+    @GET("api/users")
     suspend fun getUsers(): Response<List<User>>
 
-    @PUT("users/{id}")
+    @PUT("api/users/{id}")
     suspend fun updateUser(
         @Path("id") id: String,
         @Body user: User
     ): Response<Unit>
 
-
-    @GET("users/{id}")
+    @GET("api/users/{id}")
     suspend fun getUserById(@Path("id") id: String): User
 
-
-    @POST("users")
+    @POST("api/users")
     suspend fun createUser(@Body user: User): Response<User>
 
-    @GET("carts/{userId}")
+    @GET("api/carts/{userId}")
     suspend fun getCart(@Path("userId") userId: String): Response<Cart?>
 
-    @GET("carts")
+    @GET("api/carts")
     suspend fun getCarts(): Response<List<Cart>>
 
-    @POST("carts")
+    @POST("api/carts")
     suspend fun createCart(@Body cart: Cart): Response<Cart>
 
-    @PUT("carts/{id}")
+    @PUT("api/carts/{id}")
     suspend fun updateCart(@Path("id") id: String, @Body cart: Cart): Response<Cart>
 
-    @GET("wishlists")
+    @GET("api/wishlists")
     suspend fun getWishlists(): Response<List<Wishlist>>
 
-    @POST("wishlists")
+    @POST("api/wishlists")
     suspend fun createWishlist(@Body wishlist: Wishlist): Response<Wishlist>
 
-    @PUT("wishlists/{id}")
+    @PUT("api/wishlists/{id}")
     suspend fun updateWishlist(@Path("id") id: String, @Body wishlist: Wishlist): Response<Wishlist>
 
-    @GET("orders")
+    @GET("api/orders")
     suspend fun getOrders(): Response<List<Order>>
 
-    @POST("orders")
+    @POST("api/orders")
     suspend fun createOrder(@Body order: Order): Response<Order>
 
-    @PUT("orders/{id}")
+    @PUT("api/orders/{id}")
     suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
 
-    @POST("orders")
-    suspend fun addOrder(@Body order: Order): Response<Order>
-
-    @DELETE("cart-items/{itemId}")
+    @DELETE("api/cart-items/{itemId}")
     suspend fun deleteCartItemById(
         @Path("itemId") itemId: String
     ): Response<Unit>
 
+    @POST("/api/users/register")
+    suspend fun registerUser(@Body user: User): Response<RegisterResponse>
 
+    @GET("api/wishlists/user/{userId}")
+    suspend fun getWishlistByUserId(@Path("userId") userId: String): Response<Wishlist>
 
+    @POST("api/wishlists/toggle")
+    suspend fun toggleWishlist(@Body request: ToggleWishlistRequest): Response<Wishlist>
 
+    @DELETE("api/wishlists/{userId}/items/{productId}")
+    suspend fun removeWishlistItem(
+        @Path("userId") userId: String,
+        @Path("productId") productId: String
+    ): Response<Unit>
 }

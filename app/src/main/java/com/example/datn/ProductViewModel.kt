@@ -12,6 +12,10 @@ class ProductViewModel : ViewModel() {
     val isLoading = MutableLiveData<Boolean>()
     val error = MutableLiveData<String?>()
 
+    // LiveData lưu wishlist hiện tại của user
+    val wishlist = MutableLiveData<List<WishlistItem>>(emptyList())
+
+    // Lấy danh sách sản phẩm
     fun getListProducts() {
         viewModelScope.launch {
             isLoading.postValue(true)
@@ -34,6 +38,7 @@ class ProductViewModel : ViewModel() {
         }
     }
 
+    // Lấy chi tiết sản phẩm
     fun getProductDetail(productId: String) {
         viewModelScope.launch {
             isLoading.postValue(true)
@@ -56,5 +61,6 @@ class ProductViewModel : ViewModel() {
             }
         }
     }
-
 }
+
+

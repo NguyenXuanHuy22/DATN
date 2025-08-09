@@ -2,7 +2,7 @@ package com.example.datn
 
 
 data class ProductResponse(
-    val id: String,
+    val _id: String,
     val category: String,
     val name: String,
     val price: Int,
@@ -20,7 +20,7 @@ data class ProductVariantResponse(
 // ✅ Mapper function
 fun ProductResponse.toProduct(): Product {
     return Product(
-        id = id,
+        _id = _id,
         category = category,
         name = name,
         price = price,

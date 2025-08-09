@@ -61,7 +61,7 @@ fun AccountScreen() {
             try {
                 val response = RetrofitClient.apiService.getUsers()
                 if (response.isSuccessful) {
-                    response.body()?.firstOrNull { it.id == userId }?.let { user ->
+                    response.body()?.firstOrNull { it._id == userId }?.let { user ->
                         name = user.name
                         email = user.email
                         phone = user.phone

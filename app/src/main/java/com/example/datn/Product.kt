@@ -1,7 +1,7 @@
 package com.example.datn
 
 data class Product(
-    val id: String = "",
+    val _id: String,
     val category: String,
     val name: String,
     val price: Int,

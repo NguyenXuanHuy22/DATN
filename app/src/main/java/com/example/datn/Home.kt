@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -31,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.example.datn.utils.toDecimalString
@@ -58,12 +60,10 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
         viewModel.getListProducts()
     }
 
-    // Tạo danh sách danh mục tự động từ productList
     val categories = remember(productList) {
         listOf("Tất cả") + productList.map { it.category }.distinct()
     }
 
-    // Lọc sản phẩm theo danh mục và tìm kiếm
     val filteredProducts = productList.filter {
         (selectedCategory == "Tất cả" || it.category == selectedCategory) &&
                 it.name.contains(searchText, ignoreCase = true)
@@ -75,8 +75,9 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFFEEEEEE))  // nền xám nhẹ cả màn
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)  // padding đều 2 bên
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -98,7 +99,6 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Danh mục động
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(categories.size) { index ->
                     val category = categories[index]
@@ -106,8 +106,7 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
                     Surface(
                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
                         shape = RoundedCornerShape(50),
-                        modifier = Modifier
-                            .clickable { selectedCategory = category }
+                        modifier = Modifier.clickable { selectedCategory = category }
                     ) {
                         Text(
                             text = category,
@@ -123,14 +122,14 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(filteredProducts) { product ->
                     ProductItem(product = product) {
                         val intent = Intent(context, ProductDetail::class.java)
-                        intent.putExtra("productId", product.id)
+                        intent.putExtra("productId", product._id)
                         context.startActivity(intent)
                     }
                 }
@@ -140,60 +139,57 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 }
 
 
-
 @Composable
 fun ProductItem(
     product: Product,
     onClick: () -> Unit
 ) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF5F5F5))  // nền sáng nhẹ cho item, giống FavoriteItem
+            .clickable { onClick() }
+            .padding(bottom = 8.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .padding(8.dp)
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                .background(Color.LightGray)
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(product.image)
-                    .crossfade(true)
-                    .build(),
+                model = product.image ?: "",
                 contentDescription = product.name,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "${product.price.toDecimalString()} VND",
-                color = Color(0xFFe53935),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                error = painterResource(id = R.drawable.logo),
+                placeholder = painterResource(id = R.drawable.logo)
             )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = product.name,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 7.dp),
+            color = Color.Black
+        )
+
+        Text(
+            text = "${product.price.toDecimalString()} VND",
+            color = Color(0xFFD32F2F),
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 7.dp)
+        )
     }
 }
-
 
 
 @Composable

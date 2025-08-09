@@ -3,7 +3,7 @@ package com.example.datn
 import com.google.gson.annotations.SerializedName
 
 data class Order(
-    val id: String? = null,
+    val _id: String? = null,
     val userId: String,
     val total: Int,
     val status: String,

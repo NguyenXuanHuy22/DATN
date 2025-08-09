@@ -153,7 +153,7 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                             onDelete = { viewModel.deleteItem(item.itemId) },
                             onQuantityChange = { newQty ->
                                 scope.launch {
-                                    viewModel.updateItemQuantity(userId, item.itemId, newQty)
+                                    viewModel.updateItemQuantity(item.itemId, newQty)
                                 }
                             }
                         )

@@ -40,6 +40,11 @@ import coil.compose.AsyncImage
 import com.example.datn.ui.theme.DATNTheme
 import com.example.datn.utils.toDecimalString
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.IconButton
+import androidx.compose.material.Icon
+import androidx.compose.runtime.LaunchedEffect
 
 class ProductDetail : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,10 +62,8 @@ class ProductDetail : ComponentActivity() {
     }
 }
 
-
-
 @Composable
-fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewModel()) {
+fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewModel(),favoriteViewModel: FavoriteViewModel = viewModel() ) {
     LaunchedEffect(productId) {
         viewModel.getProductDetail(productId)
     }
@@ -78,19 +81,32 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
     }
 
     val product = productDetail!!
+    val variants = product.variants ?: emptyList()
 
-    // Lấy size từ variants
-    val availableSizes = product.variants.map { it.size }.distinct()
+    val availableSizes = variants.map { it.size }.distinct()
     var selectedSize by remember { mutableStateOf(availableSizes.firstOrNull() ?: "") }
 
-    // Lấy danh sách color tương ứng với size đang chọn
-    val availableColors = product.variants.filter { it.size == selectedSize }.map { it.color }.distinct()
+    val availableColors = variants.filter { it.size == selectedSize }.map { it.color }.distinct()
     var selectedColor by remember { mutableStateOf(availableColors.firstOrNull() ?: "") }
 
     val context = LocalContext.current
     val cartViewModel: CartViewModel = viewModel()
     val sharedPref = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-    val userId = sharedPref.getString("userId", null)
+
+    val userId = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+        .getString("userId", null)
+
+    val wishlistItems by favoriteViewModel.wishlistItems.observeAsState(emptyList())
+
+    val isFavorite = wishlistItems.any { it.productId == product._id }
+
+
+
+    LaunchedEffect(userId, productDetail) {
+        if (userId != null && productDetail != null) {
+            favoriteViewModel.loadWishlist(userId)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // App bar
@@ -131,21 +147,57 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+
+                IconButton(
+                    onClick = {
+                        val userId = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                            .getString("userId", null)
+
+                        if (userId == null) {
+                            Toast.makeText(context, "Vui lòng đăng nhập để yêu thích sản phẩm", Toast.LENGTH_SHORT).show()
+                            return@IconButton
+                        }
+
+                        favoriteViewModel.toggleFavorite(
+                            userId,
+                            WishlistItem(
+                                productId = product._id ?: "",
+                                name = product.name ?: "",
+                                image = product.image ?: "",
+                                price = product.price?.toInt() ?: 0
+                            )
+                        )
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Bỏ yêu thích" else "Yêu thích",
+                        tint = if (isFavorite) Color.Red else Color.Gray
+                    )
+                }
+
+
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(product.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(product.name ?: "", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = product.description, fontSize = 14.sp, color = Color.Gray)
-
+            Text(
+                text = product.description ?: "",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("Chọn size", fontWeight = FontWeight.Bold)
             Row {
                 availableSizes.forEach { size ->
-                    // Tổng số lượng của tất cả màu cho size này
-                    val totalQuantityForSize = product.variants
+                    val totalQuantityForSize = variants
                         .filter { it.size == size }
                         .sumOf { it.quantity }
 
@@ -162,7 +214,7 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                             )
                             .clickable {
                                 selectedSize = size
-                                selectedColor = product.variants
+                                selectedColor = variants
                                     .filter { it.size == size }
                                     .map { it.color }
                                     .firstOrNull() ?: ""
@@ -181,13 +233,12 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                 }
             }
 
-
             Spacer(modifier = Modifier.height(16.dp))
 
             Text("Chọn màu", fontWeight = FontWeight.Bold)
             Row {
                 availableColors.forEach { color ->
-                    val quantityForVariant = product.variants
+                    val quantityForVariant = variants
                         .find { it.size == selectedSize && it.color == color }
                         ?.quantity ?: 0
 
@@ -222,7 +273,6 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        // Footer
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -236,7 +286,7 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${product.price.toDecimalString()} VND",
+                    text = "${(product.price ?: 0).toDecimalString()} VND",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -245,29 +295,35 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     userId?.let { cartViewModel.loadCart(it) }
                 }
 
+                val sharedPref = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                val userId = sharedPref.getString("userId", null) ?: ""
+
                 Button(
                     onClick = {
-                        val variant = product.variants.find {
+                        val variant = variants.find {
                             it.size == selectedSize && it.color == selectedColor
                         }
 
-                        if (userId != null && variant != null) {
-                            val itemId = "${product.id}_${selectedSize}_${selectedColor}"
+                        if (userId.isNotEmpty() && variant != null) {
+                            val itemId = "${product._id}_${selectedSize}_${selectedColor}"
+
                             val cartItem = CartItem(
                                 itemId = itemId,
-                                productId = product.id,
-                                name = product.name,
-                                image = product.image,
-                                price = product.price,
+                                productId = product._id ?: "",
+                                name = product.name ?: "",
+                                image = product.image ?: "",
+                                price = product.price ?: 0,
                                 quantity = 1,
                                 size = selectedSize,
                                 color = selectedColor,
-                                maxQuantity = variant.quantity
+                                maxQuantity = variant.quantity,
+                                userId = userId
                             )
+
                             cartViewModel.addToCart(cartItem)
-                            Toast.makeText(context, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, " Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "Không thể thêm sản phẩm", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, " Không thể thêm sản phẩm", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -280,8 +336,10 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm vào giỏ hàng", color = Color.White)
                 }
+
             }
         }
     }
 }
+
 

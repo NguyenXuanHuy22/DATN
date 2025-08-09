@@ -8,7 +8,6 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.ConnectException
 import java.net.UnknownHostException
-import java.util.*
 
 class CartViewModel : ViewModel() {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
@@ -36,38 +35,36 @@ class CartViewModel : ViewModel() {
         total + ship
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-
     fun loadCart(userId: String) {
         currentUserId = userId
         viewModelScope.launch {
             try {
-                val cartList = RetrofitClient.cartService.getCartByUserId(userId)
-
-                if (cartList.isNotEmpty()) {
-                    val cart = cartList.first()
-                    currentCartId = cart.id
-                    _cartItems.value = cart.items.map { it.toCartItem() }
+                val cart = RetrofitClient.cartService.getCartByUserId(userId)
+                currentCartId = cart._id
+                _cartItems.value = cart.items?.map { it.toCartItem() } ?: emptyList()
+                _errorMessage.value = null
+            } catch (e: HttpException) {
+                if (e.code() == 404) {
+                    _cartItems.value = emptyList()
+                    currentCartId = null
                     _errorMessage.value = null
                 } else {
-                    val newCart = CartCreateRequest(userId = userId, items = emptyList())
-                    val createdCart = RetrofitClient.cartService.createCart(newCart)
-
-                    currentCartId = createdCart.id
                     _cartItems.value = emptyList()
-                    _errorMessage.value = null
+                    _errorMessage.value = "Lỗi server: ${e.code()}"
                 }
-
+            } catch (e: UnknownHostException) {
+                _cartItems.value = emptyList()
+                _errorMessage.value = "Không thể kết nối đến server"
+            } catch (e: ConnectException) {
+                _cartItems.value = emptyList()
+                _errorMessage.value = "Kết nối server thất bại"
             } catch (e: Exception) {
                 _cartItems.value = emptyList()
-                _errorMessage.value = when (e) {
-                    is HttpException -> "Lỗi server: ${e.code()}"
-                    is UnknownHostException -> "Không thể kết nối đến server"
-                    is ConnectException -> "Kết nối server thất bại"
-                    else -> "Lỗi không xác định: ${e.message}"
-                }
+                _errorMessage.value = "Lỗi không xác định: ${e.message}"
             }
         }
     }
+
 
     fun toggleItemSelection(itemId: String) {
         _selectedItems.value = _selectedItems.value.toMutableSet().apply {
@@ -75,11 +72,11 @@ class CartViewModel : ViewModel() {
         }
     }
 
-    fun updateItemQuantity(userId: String, itemId: String, newQuantity: Int) {
+    fun updateItemQuantity(itemId: String, newQuantity: Int) {
         viewModelScope.launch {
             try {
-                val updatedList = _cartItems.value.map { item ->
-                    if (item.itemId == itemId) item.copy(quantity = newQuantity) else item
+                val updatedList = _cartItems.value.map {
+                    if (it.itemId == itemId) it.copy(quantity = newQuantity) else it
                 }
                 _cartItems.value = updatedList
                 updateCartOnServer(updatedList)
@@ -89,64 +86,82 @@ class CartViewModel : ViewModel() {
         }
     }
 
-    fun deleteItem(itemId: String) {
-        val updatedList = _cartItems.value.filterNot { it.itemId == itemId }
-        _cartItems.value = updatedList
-        _selectedItems.value = _selectedItems.value - itemId
-        updateCartOnServer(updatedList)
-    }
-
-    fun addToCart(cartItem: CartItem) {
-        val userId = currentUserId
-        val cartId = currentCartId
-
-        if (userId == null || cartId == null) {
-            _errorMessage.value = "Không thể thêm vào giỏ hàng: thiếu userId hoặc cartId"
+    fun deleteItem(itemId: String?) {
+        val cartId = currentCartId ?: run {
+            _errorMessage.value = "Không thể xoá sản phẩm: cartId null"
+            return
+        }
+        val validItemId = itemId ?: run {
+            _errorMessage.value = "Không thể xoá sản phẩm: itemId null"
             return
         }
 
+        // Lưu danh sách cũ để rollback nếu xoá fail
+        val oldList = _cartItems.value
+
+        // Cập nhật UI ngay lập tức (xoá item khỏi danh sách)
+        _cartItems.value = oldList.filter { it.itemId != validItemId }
+
         viewModelScope.launch {
             try {
-                val existing = _cartItems.value.find { it.itemId == cartItem.itemId }
+                RetrofitClient.cartService.deleteItemFromCart(cartId, validItemId)
+                Log.d("DeleteItem", "✅ Xóa thành công itemId: $validItemId")
+            } catch (e: Exception) {
+                // Rollback nếu server xoá thất bại
+                _cartItems.value = oldList
+                _errorMessage.value = "Không thể xoá sản phẩm: ${e.message}"
+                Log.e("DeleteItem", "❌ Lỗi khi xoá sản phẩm: ${e.message}", e)
+            }
+        }
+    }
 
-                val updatedList = if (existing != null) {
-                    _cartItems.value.map {
-                        if (it.itemId == cartItem.itemId)
-                            it.copy(quantity = it.quantity + cartItem.quantity)
-                        else it
-                    }
-                } else {
-                    _cartItems.value + cartItem
+
+    fun addToCart(item: CartItem) {
+        viewModelScope.launch {
+            try {
+                val userId = item.userId
+                Log.d("CART", "User ID: $userId")
+
+                val cart = try {
+                    RetrofitClient.cartService.getCartByUserId(userId)
+                } catch (e: HttpException) {
+                    if (e.code() == 404) {
+                        val newCart = CartCreateRequest(
+                            userId = userId,
+                            items = listOf(item.toDtoForCreate())
+                        )
+                        val created = RetrofitClient.cartService.createCart(newCart)
+                        currentCartId = created._id
+                        currentUserId = userId
+                        _cartItems.value = created.items.map { it.toCartItem() }
+                        return@launch
+                    } else throw e
                 }
 
-                _cartItems.value = updatedList
-                updateCartOnServer(updatedList)
+                currentCartId = cart._id
+                currentUserId = userId
 
+                val response = RetrofitClient.cartService.addItemToCart(
+                    cartId = cart._id,
+                    newItem = item.toDtoForCreate()
+                )
+
+                _cartItems.value = response.items.map { it.toCartItem() }
             } catch (e: Exception) {
-                _errorMessage.value = "Lỗi thêm vào giỏ hàng: ${e.message}"
+                Log.e("CART", "Lỗi khi thêm vào giỏ hàng", e)
+                _errorMessage.value = "Lỗi khi thêm vào giỏ hàng: ${e.message}"
             }
         }
     }
 
     private fun updateCartOnServer(updatedItems: List<CartItem>) {
-        val userId = currentUserId ?: return
         val cartId = currentCartId ?: return
+        val userId = currentUserId ?: return
 
         val updatedCart = CartResponse(
-            id = cartId,
+            _id = cartId,
             userId = userId,
-            items = updatedItems.map {
-                CartItemDto(
-                    itemId = it.itemId,
-                    productId = it.productId,
-                    image = it.image,
-                    name = it.name,
-                    price = it.price,
-                    size = it.size,
-                    color = it.color,
-                    quantity = it.quantity
-                )
-            }
+            items = updatedItems.map { it.toDtoForUpdate() }
         )
 
         viewModelScope.launch {
@@ -158,5 +173,3 @@ class CartViewModel : ViewModel() {
         }
     }
 }
-
-

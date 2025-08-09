@@ -103,7 +103,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                                     .fillMaxWidth()
                                     .clickable {
                                         val intent = Intent(context, ProductDetail::class.java)
-                                        intent.putExtra("productId", product.id)
+                                        intent.putExtra("productId", product._id)
                                         context.startActivity(intent)
                                     }
                                     .padding(8.dp)

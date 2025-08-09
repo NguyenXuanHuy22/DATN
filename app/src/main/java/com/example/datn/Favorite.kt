@@ -1,12 +1,17 @@
 package com.example.datn
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -18,15 +23,23 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.datn.ui.theme.DATNTheme
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextOverflow
+
 
 class Favorite : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,86 +54,167 @@ class Favorite : ComponentActivity() {
 }
 
 @Composable
-fun FavoriteScreen() {
-    Scaffold(
+fun FavoriteScreen(favoriteViewModel: FavoriteViewModel = viewModel()) {
+    val context = LocalContext.current
+    val sharedPref = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPref.getString("userId", null)
 
+    val wishlistItems by favoriteViewModel.wishlistItems.observeAsState(emptyList())
+    val error by favoriteViewModel.error.observeAsState()
+
+    LaunchedEffect(userId) {
+        userId?.let { favoriteViewModel.loadWishlist(it) }
+    }
+
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sản phẩm yêu thích") }, //san pham yeu thich
+                title = { Text("Sản phẩm yêu thích") },
                 backgroundColor = Color.White,
                 contentColor = Color.Black
             )
-
         },
-        bottomBar = { //test
+        bottomBar = {
             BottomNavigationBarrr(currentScreen = "Saved")
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(8.dp)
-        ) {
-            // Chưa có dữ liệu nên hiển thị thông báo
+
+        if (userId == null) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEEEEEE))
+                    .padding(innerPadding)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Vui lòng đăng nhập để xem danh sách yêu thích", color = Color.Gray)
+            }
+            return@Scaffold
+        }
+
+        if (wishlistItems.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEEEEEE))
+                    .padding(innerPadding)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text("Chưa có sản phẩm yêu thích nào", color = Color.Gray)
             }
-
-            // Nếu sau này có sản phẩm, bạn chỉ cần thay phần trên bằng LazyVerticalGrid như sau:
-            /*
+        } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxHeight()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEEEEEE))
+                    .padding(innerPadding)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                items(favoriteList) { product ->
-                    FavoriteItem(product = product, onDelete = { /* xoá sản phẩm */ })
+                items(items = wishlistItems) { item ->
+                    FavoriteItem(
+                        product = Product(
+                            _id = item.productId,
+                            category = "",
+                            name = item.name,
+                            price = item.price,
+                            image = item.image,
+                            description = "",
+                            variants = emptyList()
+                        ),
+                        onDelete = {
+                            userId?.let { favoriteViewModel.deleteWishlistItem(it, item.productId) }
+                        },
+                        onClick = {
+                            val intent = Intent(context, ProductDetail::class.java)
+                            intent.putExtra("productId", item.productId)
+                            context.startActivity(intent)
+                        }
+                    )
                 }
             }
-            */
         }
     }
 }
 
+
 @Composable
-fun FavoriteItem(product: Product, onDelete: () -> Unit) {
+fun FavoriteItem(
+    product: Product,
+    onDelete: () -> Unit,
+    onClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray)
-            .padding(8.dp)
+            .background(Color(0xFFF5F5F5))
+            .clickable { onClick() }
+            .padding(bottom = 8.dp)
     ) {
-        // Hiện chưa cần hiển thị ảnh thật
         Box(
             modifier = Modifier
-                .height(150.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.Gray)
-        )
+                .height(180.dp)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                .background(Color.LightGray)
+        ) {
+            AsyncImage(
+                model = product.image,
+                contentDescription = product.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+            )
+
+            IconButton(
+                onClick = { onDelete() },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(28.dp)
+                    .background(Color.White.copy(alpha = 0.7f), shape = CircleShape)
+                    .clip(CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Xoá khỏi yêu thích",
+                    tint = Color.Red
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = product.name,
-            fontWeight = FontWeight.Bold
+            text = product.name ?: "",
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp),
+            color = Color.Black
         )
-        Text(text = "${product.price} vnd", color = Color.DarkGray)
 
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Icon(Icons.Default.Delete, contentDescription = "Xoá khỏi yêu thích")
-        }
+        Text(
+            text = "${product.price.toInt()} VND",
+            color = Color(0xFFD32F2F), // đỏ đậm giống hình mẫu
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
     }
 }
+
 
 @Composable
 fun BottomNavigationBarrr(currentScreen: String) {
