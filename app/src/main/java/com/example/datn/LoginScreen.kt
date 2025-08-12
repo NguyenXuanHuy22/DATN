@@ -107,10 +107,8 @@ fun LoginScreenContent() {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(imageVector = icon, contentDescription = null)
                 }
-
             },
             singleLine = true,
-
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -142,18 +140,24 @@ fun LoginScreenContent() {
                                 val user = users.find { u -> u.email == email && u.password == password }
 
                                 if (user != null) {
-                                    // Save userId to SharedPreferences
-                                    context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-                                        .edit()
-                                        .clear()
-                                        .putString("userId", user._id)
-                                        .putString("userRole", user.role)
-                                        .apply()
+                                    if (user.role == "locked") {
+                                        Toast.makeText(context, "Tài khoản của bạn đã bị khóa", Toast.LENGTH_LONG).show()
+                                    } else if (user.role == "user") {
+                                        // Save userId and role to SharedPreferences
+                                        context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                                            .edit()
+                                            .clear()
+                                            .putString("userId", user._id)
+                                            .putString("userRole", user.role)
+                                            .apply()
 
-                                    Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
-                                    val intent = Intent(context, Home::class.java)
-                                    context.startActivity(intent)
-                                    (context as ComponentActivity).finish()
+                                        Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
+                                        val intent = Intent(context, Home::class.java)
+                                        context.startActivity(intent)
+                                        (context as ComponentActivity).finish()
+                                    } else {
+                                        Toast.makeText(context, "Vai trò người dùng không hợp lệ", Toast.LENGTH_LONG).show()
+                                    }
                                 } else {
                                     emailError = "Email hoặc mật khẩu không đúng"
                                     passwordError = "Email hoặc mật khẩu không đúng"

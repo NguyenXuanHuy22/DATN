@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.datn.ui.theme.DATNTheme
@@ -59,25 +61,21 @@ fun OrderHistoryContent(
 
     val statusList = listOf(
         "Chờ xác nhận",
-        "Đã xác nhận đơn hàng",
-        "Đang chuẩn bị đơn hàng",
+        "Đã xác nhận",
         "Đang giao hàng",
         "Đã giao",
         "Đã huỷ"
     )
 
     var selectedTab by remember { mutableStateOf(statusList.first()) }
-
     val filteredOrders = orders.filter { it.status == selectedTab }
 
     LaunchedEffect(userId) {
-        while (true) {
-            viewModel.loadOrders(userId)
-            delay(5000L)
-        }
+        viewModel.loadOrders(userId)
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        // Thanh tiêu đề
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -94,26 +92,40 @@ fun OrderHistoryContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Menu trạng thái
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(statusList) { status ->
-                OutlinedButton(
-                    onClick = { selectedTab = status },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (selectedTab == status) Color.Black else Color.LightGray
-                    )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable {
+                            selectedTab = status
+                            viewModel.loadOrders(userId) // Load lại dữ liệu khi đổi tab
+                        }
                 ) {
                     Text(
                         text = status,
-                        color = Color.White,
-                        fontSize = MaterialTheme.typography.labelMedium.fontSize
+                        fontWeight = if (selectedTab == status) FontWeight.Bold else FontWeight.Normal,
+                        color = Color.Black
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (selectedTab == status) {
+                        Box(
+                            modifier = Modifier
+                                .height(2.dp)
+                                .width(24.dp)
+                                .background(Color.Black, shape = RoundedCornerShape(1.dp))
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Danh sách đơn hàng
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(filteredOrders) { order ->
                 OrderCard(order = order)
@@ -124,7 +136,7 @@ fun OrderHistoryContent(
 
 @Composable
 fun OrderCard(order: Order) {
-    val firstItem = order.items.firstOrNull()
+    val totalQuantity = order.items.sumOf { it.quantity }
 
     Column(
         modifier = Modifier
@@ -134,65 +146,81 @@ fun OrderCard(order: Order) {
             .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
-        if (firstItem != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        // Trạng thái đơn hàng ở trên cùng
+        Text(
+            text = order.status ?: "",
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Hiển thị tất cả sản phẩm
+        order.items.forEach { item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
                 AsyncImage(
-                    model = firstItem.image,
+                    model = item.image ?: "",
                     contentDescription = null,
                     modifier = Modifier.size(70.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(firstItem.name, fontWeight = FontWeight.Bold)
-                    Text("Size ${firstItem.size}")
-                    Text("Màu ${firstItem.color}")
-                    Text("x${firstItem.quantity}")
+                    Text(item.name ?: "", fontWeight = FontWeight.Bold)
+                    Text("Size ${item.size ?: ""}")
+                    Text("Màu ${item.color ?: ""}")
+                    Text("x${item.quantity}")
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "${firstItem.subtotal.toDecimalString()}đ",
+                        "${item.subtotal.toDecimalString()}đ",
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFe53935)
                     )
                 }
-
-                val statusColor = when (order.status) {
-                    "Đã giao" -> Color(0xFF4CAF50)
-                    "Đã huỷ" -> Color.Red
-                    else -> Color.Gray
-                }
-
-                Box(
-                    modifier = Modifier
-                        .background(statusColor, shape = RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        order.status,
-                        color = Color.White,
-                        fontSize = MaterialTheme.typography.labelSmall.fontSize
-                    )
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            if (order.status == "Đã giao") {
-                Button(
-                    onClick = { /* Navigate to review */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-                ) {
-                    Text("Đánh giá", color = Color.White)
-                }
-            } else if (order.status == "Đã huỷ") {
-                Button(
-                    onClick = { /* Mua lại */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-                ) {
-                    Text("Mua lại", color = Color.White)
-                }
+        // Hiển thị tổng số sản phẩm và tổng tiền đơn hàng
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Tổng sản phẩm: $totalQuantity",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = "Tổng tiền: ${order.total.toDecimalString()}đ",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFFd32f2f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Nút hành động
+        if (order.status == "Đã giao") {
+            Button(
+                onClick = { /* Navigate to review */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+            ) {
+                Text("Đánh giá", color = Color.White)
             }
+        } else if (order.status == "Đã huỷ") {
+            // Có thể thêm hành động khác nếu cần
         }
     }
 }
+
+
+
+
+

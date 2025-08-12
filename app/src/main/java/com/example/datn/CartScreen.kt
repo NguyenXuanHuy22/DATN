@@ -77,17 +77,13 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         viewModel.loadCart(userId)
     }
 
-    val shippingFee by viewModel.shippingFee.collectAsState()
     val grandTotal by viewModel.grandTotal.collectAsState()
 
     Scaffold(
         bottomBar = {
             Column {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (shippingFee == 0) "Phí vận chuyển: Miễn phí cho đơn trên 500k"
-                        else "Phí vận chuyển: ${shippingFee.toDecimalString()} VND"
-                    )
+
                     Text("Tổng cộng: ${grandTotal.toDecimalString()} VND", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -97,14 +93,12 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                                 Toast.makeText(context, "Vui lòng chọn sản phẩm để đặt hàng", Toast.LENGTH_SHORT).show()
                             } else {
                                 val gson = Gson()
-
-                                // ✅ Lấy danh sách CartItem đã chọn
                                 val selectedCartItems = cartItems.filter { selectedItems.contains(it.itemId) }
                                 val selectedItemsJson = gson.toJson(selectedCartItems)
 
                                 val intent = Intent(context, OrderScreen::class.java).apply {
                                     putExtra("selectedItemsJson", selectedItemsJson)
-                                    putExtra("shippingFee", shippingFee)
+
                                 }
                                 context.startActivity(intent)
                             }
@@ -114,8 +108,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     ) {
                         Text("Đặt hàng")
                     }
-
-
                 }
                 BottomNavigationBarCart(currentScreen = "Cart")
             }
@@ -163,6 +155,7 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         }
     }
 }
+
 
 @Composable
 fun CartItemRow(

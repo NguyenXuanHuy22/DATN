@@ -65,7 +65,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search for clothes...") },
+                placeholder = { Text("Tìm kiếm sản phẩm...") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 modifier = Modifier
                     .fillMaxWidth()

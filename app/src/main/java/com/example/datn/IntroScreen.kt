@@ -64,7 +64,7 @@ fun IntroScreenContent() {
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Bắt đầu", color = Color.White)
+                Text("đăng nhập", color = Color.White)
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Default.ArrowForward, contentDescription = "Start", tint = Color.White)
             }

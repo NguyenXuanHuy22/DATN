@@ -9,12 +9,14 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ProductService {
+    // ===== Product =====
     @GET("api/products")
     suspend fun getListProducts(): Response<List<ProductData>>
 
     @GET("api/products/{id}")
     suspend fun getProduct(@Path("id") id: String): Response<ProductData>
 
+    // ===== User =====
     @GET("api/users")
     suspend fun getUsers(): Response<List<User>>
 
@@ -27,30 +29,10 @@ interface ProductService {
     @GET("api/users/{id}")
     suspend fun getUserById(@Path("id") id: String): User
 
-    @POST("api/users")
-    suspend fun createUser(@Body user: User): Response<User>
+    @POST("/api/users/register")
+    suspend fun registerUser(@Body user: User): Response<RegisterResponse>
 
-    @GET("api/carts/{userId}")
-    suspend fun getCart(@Path("userId") userId: String): Response<Cart?>
-
-    @GET("api/carts")
-    suspend fun getCarts(): Response<List<Cart>>
-
-    @POST("api/carts")
-    suspend fun createCart(@Body cart: Cart): Response<Cart>
-
-    @PUT("api/carts/{id}")
-    suspend fun updateCart(@Path("id") id: String, @Body cart: Cart): Response<Cart>
-
-    @GET("api/wishlists")
-    suspend fun getWishlists(): Response<List<Wishlist>>
-
-    @POST("api/wishlists")
-    suspend fun createWishlist(@Body wishlist: Wishlist): Response<Wishlist>
-
-    @PUT("api/wishlists/{id}")
-    suspend fun updateWishlist(@Path("id") id: String, @Body wishlist: Wishlist): Response<Wishlist>
-
+    // ===== Order =====
     @GET("api/orders")
     suspend fun getOrders(): Response<List<Order>>
 
@@ -60,14 +42,19 @@ interface ProductService {
     @PUT("api/orders/{id}")
     suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
 
+    // ✅ Sửa đúng path có "api/"
+    @GET("api/orders/user/{userId}")
+    suspend fun getOrdersByUser(@Path("userId") userId: String): Response<List<Order>>
+
+
+
+    // ===== Cart =====
     @DELETE("api/cart-items/{itemId}")
     suspend fun deleteCartItemById(
         @Path("itemId") itemId: String
     ): Response<Unit>
 
-    @POST("/api/users/register")
-    suspend fun registerUser(@Body user: User): Response<RegisterResponse>
-
+    // ===== Wishlist =====
     @GET("api/wishlists/user/{userId}")
     suspend fun getWishlistByUserId(@Path("userId") userId: String): Response<Wishlist>
 

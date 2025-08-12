@@ -6,7 +6,8 @@ data class Order(
     val _id: String? = null,
     val userId: String,
     val total: Int,
-    val status: String,
+    val status: String? = null,
+    val paymentMethod: String,
     val items: List<OrderItem>
 )
 
@@ -22,10 +23,10 @@ data class OrderItem(
     val subtotal: Int,
     val date: String,
 
-    @SerializedName("Payment method")
+    @SerializedName("paymentMethod")
     val paymentMethod: String,
-
     val customerName: String,
     val customerPhone: String,
     val customerAddress: String
 )
+

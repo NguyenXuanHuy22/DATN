@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -75,7 +76,7 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFEEEEEE))  // nền xám nhẹ cả màn
+                .background(Color(0xFFFFFFFF))  // nền xám nhẹ cả màn
                 .padding(innerPadding)
                 .padding(horizontal = 12.dp, vertical = 8.dp)  // padding đều 2 bên
         ) {
@@ -99,24 +100,36 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(categories.size) { index ->
                     val category = categories[index]
                     val isSelected = selectedCategory == category
-                    Surface(
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.LightGray,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.clickable { selectedCategory = category }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { selectedCategory = category }
                     ) {
                         Text(
                             text = category,
-                            color = if (isSelected) Color.White else Color.Black,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.labelLarge
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = Color.Black
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .height(2.dp)
+                                    .width(24.dp)
+                                    .background(Color.Black, shape = RoundedCornerShape(1.dp))
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
                     }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -148,7 +161,7 @@ fun ProductItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF5F5F5))  // nền sáng nhẹ cho item, giống FavoriteItem
+            .background(Color(0xFFF5F5F5))
             .clickable { onClick() }
             .padding(bottom = 8.dp)
     ) {

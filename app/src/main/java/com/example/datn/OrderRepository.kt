@@ -15,12 +15,12 @@ import com.example.datn.ui.theme.DATNTheme
 
 class OrderRepository {
     suspend fun getOrdersByUser(userId: String): List<Order> {
-        val response = RetrofitClient.apiService.getOrders()
-        if (response.isSuccessful) {
-            return response.body()?.filter { it.userId == userId } ?: emptyList()
-        }
-        return emptyList()
+        val response = RetrofitClient.apiService.getOrdersByUser(userId)
+        return if (response.isSuccessful) {
+            response.body() ?: emptyList()
+        } else emptyList()
     }
 }
+
 
 

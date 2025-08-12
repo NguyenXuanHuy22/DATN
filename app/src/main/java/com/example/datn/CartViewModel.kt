@@ -27,13 +27,11 @@ class CartViewModel : ViewModel() {
             .sumOf { it.price * it.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    val shippingFee: StateFlow<Int> = totalPrice.map {
-        if (it >= 500_000) 0 else 30_000
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    // Bỏ phí vận chuyển, luôn trả 0
+    val shippingFee: StateFlow<Int> = flowOf(0).stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    val grandTotal: StateFlow<Int> = combine(totalPrice, shippingFee) { total, ship ->
-        total + ship
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    // grandTotal = totalPrice (không cộng phí ship)
+    val grandTotal: StateFlow<Int> = totalPrice
 
     fun loadCart(userId: String) {
         currentUserId = userId

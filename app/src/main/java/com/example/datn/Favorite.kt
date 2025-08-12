@@ -89,7 +89,7 @@ fun FavoriteScreen(favoriteViewModel: FavoriteViewModel = viewModel()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFEEEEEE))
+                    .background(Color(0xFFFFFFFF))
                     .padding(innerPadding)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
