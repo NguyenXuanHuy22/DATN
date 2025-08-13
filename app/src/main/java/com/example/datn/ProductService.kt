@@ -66,4 +66,10 @@ interface ProductService {
         @Path("userId") userId: String,
         @Path("productId") productId: String
     ): Response<Unit>
+
+    // ===== banner =====
+
+    @GET("api/banners")
+    suspend fun getBanners(): List<Banner>
+
 }

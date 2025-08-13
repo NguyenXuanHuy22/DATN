@@ -109,4 +109,11 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.12.0")
 
+    implementation("androidx.compose.foundation:foundation:1.4.3")
+
+    implementation("androidx.compose.material3:material3:1.1.1")
+    implementation("androidx.compose.ui:ui:1.4.3")
+
+    implementation("com.google.accompanist:accompanist-pager:0.30.1")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.30.1")
 }

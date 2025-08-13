@@ -83,12 +83,7 @@ fun EditProfileScreen() {
             contentDescription = null,
             modifier = Modifier.size(100.dp)
         )
-        OutlinedTextField(
-            value = avatarUrl,
-            onValueChange = { avatarUrl = it },
-            label = { Text("Link ảnh đại diện") },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-        )
+
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -101,12 +96,7 @@ fun EditProfileScreen() {
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Mật khẩu") },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-        )
+
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },

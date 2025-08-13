@@ -8,10 +8,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.example.datn.utils.toDecimalString
 
+
 class Home : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,14 +55,21 @@ class Home : ComponentActivity() {
 }
 
 @Composable
-fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
+fun HomeScreen(
+    productViewModel: ProductViewModel = viewModel(),
+    bannerViewModel: BannerViewModel = viewModel()
+) {
     val context = LocalContext.current
-    val productList by viewModel.products.observeAsState(emptyList())
+    val productList by productViewModel.products.observeAsState(emptyList())
+    val banners = bannerViewModel.banners
+    val currentIndex = bannerViewModel.currentIndex
+
     var selectedCategory by remember { mutableStateOf("Tất cả") }
     var searchText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.getListProducts()
+        productViewModel.getListProducts()
+        bannerViewModel.loadBanners()
     }
 
     val categories = remember(productList) {
@@ -73,84 +84,142 @@ fun HomeScreen(viewModel: ProductViewModel = viewModel()) {
     Scaffold(
         bottomBar = { BottomNavigationBar(currentScreen = "Home") }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFFFFFFF))  // nền xám nhẹ cả màn
-                .padding(innerPadding)
-                .padding(horizontal = 12.dp, vertical = 8.dp)  // padding đều 2 bên
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = { searchText = it },
-                placeholder = { Text("Tìm kiếm sản phẩm...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val intent = Intent(context, SearchActivity::class.java)
-                        context.startActivity(intent)
-                    },
-                readOnly = true,
-                enabled = false
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Header cố định: tìm kiếm + danh mục
+            Column(modifier = Modifier.fillMaxWidth().background(Color.White).padding(12.dp)) {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = { searchText = it },
+                    placeholder = { Text("Tìm kiếm sản phẩm...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(context, SearchActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                    readOnly = true,
+                    enabled = false
+                )
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(categories.size) { index ->
-                    val category = categories[index]
-                    val isSelected = selectedCategory == category
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clickable { selectedCategory = category }
-                    ) {
-                        Text(
-                            text = category,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = Color.Black
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .height(2.dp)
-                                    .width(24.dp)
-                                    .background(Color.Black, shape = RoundedCornerShape(1.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(categories.size) { index ->
+                        val category = categories[index]
+                        val isSelected = selectedCategory == category
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable { selectedCategory = category }
+                        ) {
+                            Text(
+                                text = category,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = Color.Black
                             )
-                        } else {
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .height(2.dp)
+                                        .width(24.dp)
+                                        .background(Color.Black, shape = RoundedCornerShape(1.dp))
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.height(2.dp))
+                            }
                         }
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+            // Nội dung cuộn: banner + sản phẩm
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                items(filteredProducts) { product ->
-                    ProductItem(product = product) {
-                        val intent = Intent(context, ProductDetail::class.java)
-                        intent.putExtra("productId", product._id)
-                        context.startActivity(intent)
+                // Banner
+                if (banners.isNotEmpty()) {
+                    item {
+                        BannerSlider(banners = banners, currentIndex = currentIndex)
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
+
+                // Product grid 2 cột
+                items(filteredProducts.chunked(2)) { rowItems ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rowItems.forEach { product ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProductItem(product = product) {
+                                    val intent = Intent(context, ProductDetail::class.java)
+                                    intent.putExtra("productId", product._id)
+                                    context.startActivity(intent)
+                                }
+                            }
+                        }
+
+                        if (rowItems.size < 2) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
     }
 }
 
+
+@Composable
+fun BannerSlider(banners: List<Banner>, currentIndex: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.LightGray)
+        ) {
+            if (banners.isNotEmpty()) {
+                AsyncImage(
+                    model = "http://192.168.1.13:5000${banners[currentIndex].image}",
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.logo),
+                    error = painterResource(id = R.drawable.logo)
+                )
+
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Indicator
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            banners.forEachIndexed { index, _ ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == currentIndex) 10.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(if (index == currentIndex) Color.Black else Color.Gray)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun ProductItem(
