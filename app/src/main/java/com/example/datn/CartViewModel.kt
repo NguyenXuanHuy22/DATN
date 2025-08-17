@@ -121,20 +121,21 @@ class CartViewModel : ViewModel() {
                 Log.d("CART", "User ID: $userId")
 
                 val cart = try {
-                    RetrofitClient.cartService.getCartByUserId(userId)
+                    RetrofitClient.cartService.getCartByUserId(userId!!)
                 } catch (e: HttpException) {
                     if (e.code() == 404) {
                         val newCart = CartCreateRequest(
-                            userId = userId,
+                            userId = userId!!,
                             items = listOf(item.toDtoForCreate())
                         )
                         val created = RetrofitClient.cartService.createCart(newCart)
                         currentCartId = created._id
-                        currentUserId = userId
+                        currentUserId = userId!!
                         _cartItems.value = created.items.map { it.toCartItem() }
                         return@launch
                     } else throw e
                 }
+
 
                 currentCartId = cart._id
                 currentUserId = userId

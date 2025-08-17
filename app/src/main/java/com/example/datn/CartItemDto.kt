@@ -8,7 +8,7 @@ data class CartItemDto(
     @SerializedName(value = "_id", alternate = ["itemId"])
     val _id: String?, // ID của item trong MongoDB
     val productId: String,
-    val image: String,
+    val image: String? = null,
     val name: String,
     val price: Int,
     val size: String,
@@ -21,7 +21,7 @@ fun CartItemDto.toCartItem(): CartItem {
     return CartItem(
         itemId = _id ?: "",
         productId = productId,
-        image = image,
+        image = image ?: "",
         name = name,
         price = price,
         quantity = quantity,

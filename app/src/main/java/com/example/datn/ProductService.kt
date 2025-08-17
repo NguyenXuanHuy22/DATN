@@ -1,11 +1,17 @@
 package com.example.datn
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
+import retrofit2.http.PartMap
 import retrofit2.http.Path
 
 interface ProductService {
@@ -20,17 +26,33 @@ interface ProductService {
     @GET("api/users")
     suspend fun getUsers(): Response<List<User>>
 
+    @GET("api/users/{id}")
+    suspend fun getUserById(@Path("id") id: String): User
+
+    @POST("api/users/register")
+    suspend fun registerUser(@Body user: User): Response<RegisterResponse>
+
+    // Update User bình thường (JSON)
     @PUT("api/users/{id}")
     suspend fun updateUser(
         @Path("id") id: String,
         @Body user: User
     ): Response<Unit>
 
-    @GET("api/users/{id}")
-    suspend fun getUserById(@Path("id") id: String): User
+    @Multipart
+    @PUT("api/users/{id}")
+    suspend fun updateUserMultipart(
+        @Path("id") id: String,
+        @Part avatar: MultipartBody.Part?, // có thể null
+        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>
+    ): Response<User>
 
-    @POST("/api/users/register")
-    suspend fun registerUser(@Body user: User): Response<RegisterResponse>
+    // Update JSON (không ảnh)
+    @PUT("api/users/{id}")
+    suspend fun updateUserJson(
+        @Path("id") id: String,
+        @Body body: UpdateUserRequest
+    ): Response<User>
 
     // ===== Order =====
     @GET("api/orders")
@@ -42,9 +64,16 @@ interface ProductService {
     @PUT("api/orders/{id}")
     suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
 
-    // ✅ Sửa đúng path có "api/"
+    //  Sửa đúng path có "api/"
     @GET("api/orders/user/{userId}")
     suspend fun getOrdersByUser(@Path("userId") userId: String): Response<List<Order>>
+
+    // Lấy chi tiết 1 đơn hàng theo id
+    @GET("api/orders/{id}/detail")
+    suspend fun getOrderDetail(@Path("id") orderId: String): Response<Order>
+
+    @PATCH("api/orders/{id}/cancel")
+    suspend fun cancelOrder(@Path("id") orderId: String): Response<CancelOrderResponse>
 
 
 
@@ -71,5 +100,7 @@ interface ProductService {
 
     @GET("api/banners")
     suspend fun getBanners(): List<Banner>
+
+
 
 }

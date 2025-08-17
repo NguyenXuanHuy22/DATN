@@ -3,30 +3,29 @@ package com.example.datn
 import com.google.gson.annotations.SerializedName
 
 data class Order(
-    val _id: String? = null,
-    val userId: String,
-    val total: Int,
-    val status: String? = null,
-    val paymentMethod: String,
-    val items: List<OrderItem>
+    @SerializedName("_id") val orderId: String,
+    @SerializedName("userId") val userId: String,
+    @SerializedName("items") val items: List<OrderItem>,
+    @SerializedName("total") val total: Int,
+    @SerializedName("paymentMethod") val paymentMethod: String,
+    @SerializedName("status") val status: String,
+    @SerializedName("date") val date: String,
+
+    // ✅ Map đúng field từ MongoDB
+    @SerializedName("customerName") val customerName: String?,
+    @SerializedName("customerPhone") val customerPhone: String?,
+    @SerializedName("customerAddress") val customerAddress: String?
 )
 
 data class OrderItem(
-    val orderDetailId: String? = null,
-    val name: String,
-    val productId: String,
-    val image: String,
-    val price: Int,
-    val quantity: Int,
-    val size: String,
-    val color: String,
-    val subtotal: Int,
-    val date: String,
-
-    @SerializedName("paymentMethod")
-    val paymentMethod: String,
-    val customerName: String,
-    val customerPhone: String,
-    val customerAddress: String
+    // ✅ MongoDB dùng orderDetailId, không phải _id
+    @SerializedName("orderDetailId") val orderDetailId: String,
+    @SerializedName("productId") val productId: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("image") val image: String,
+    @SerializedName("price") val price: Int,
+    @SerializedName("quantity") val quantity: Int,
+    @SerializedName("size") val size: String,
+    @SerializedName("color") val color: String,
+    @SerializedName("subtotal") val subtotal: Int
 )
-

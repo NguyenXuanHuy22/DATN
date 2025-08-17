@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.IconButton
 import androidx.compose.material.Icon
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.painterResource
 
 class ProductDetail : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,12 +143,43 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     .fillMaxWidth()
                     .height(300.dp)
             ) {
-                AsyncImage(
-                    model = product.image,
-                    contentDescription = product.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                val context = LocalContext.current
+
+                // ✅ Tạo ImageRequest giống ProductItem
+                val imageRequest = remember(product.image) {
+                    product.image?.let { base64String ->
+                        if (base64String.startsWith("data:image")) {
+                            val pureBase64 = base64String.substringAfter("base64,")
+                            val decodedBytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+                            coil.request.ImageRequest.Builder(context)
+                                .data(decodedBytes)
+                                .crossfade(true)
+                                .build()
+                        } else {
+                            coil.request.ImageRequest.Builder(context)
+                                .data(product.image) // nếu backend trả về URL
+                                .crossfade(true)
+                                .build()
+                        }
+                    }
+                }
+
+                if (imageRequest != null) {
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = product.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        placeholder = painterResource(id = R.drawable.logo),
+                        error = painterResource(id = R.drawable.logo)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "Placeholder",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
                 IconButton(
                     onClick = {
@@ -154,7 +187,11 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                             .getString("userId", null)
 
                         if (userId == null) {
-                            Toast.makeText(context, "Vui lòng đăng nhập để yêu thích sản phẩm", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Vui lòng đăng nhập để yêu thích sản phẩm",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@IconButton
                         }
 
@@ -179,8 +216,6 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                         tint = if (isFavorite) Color.Red else Color.Gray
                     )
                 }
-
-
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -304,7 +339,12 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                             it.size == selectedSize && it.color == selectedColor
                         }
 
-                        if (userId.isNotEmpty() && variant != null) {
+                        if (variant == null || variant.quantity <= 0) {
+                            Toast.makeText(context, "Sản phẩm đã hết", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (userId.isNotEmpty()) {
                             val itemId = "${product._id}_${selectedSize}_${selectedColor}"
 
                             val cartItem = CartItem(
@@ -321,9 +361,9 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                             )
 
                             cartViewModel.addToCart(cartItem)
-                            Toast.makeText(context, " Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, " Không thể thêm sản phẩm", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Vui lòng đăng nhập để thêm sản phẩm", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -336,6 +376,7 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Thêm vào giỏ hàng", color = Color.White)
                 }
+
 
             }
         }

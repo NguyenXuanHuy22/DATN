@@ -2,6 +2,7 @@ package com.example.datn
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,12 +28,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.datn.ui.theme.DATNTheme
 import com.example.datn.utils.toDecimalString
@@ -45,14 +48,12 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
-
 class OrderScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val selectedItemsJson = intent.getStringExtra("selectedItemsJson")
-
         val selectedItems: List<CartItem> = if (!selectedItemsJson.isNullOrEmpty()) {
             val type = object : TypeToken<List<CartItem>>() {}.type
             Gson().fromJson(selectedItemsJson, type)
@@ -64,28 +65,56 @@ class OrderScreen : ComponentActivity() {
         setContent {
             DATNTheme {
                 if (userId != null) {
-                    val viewContext = LocalContext.current
+                    val context = LocalContext.current
                     var user by remember { mutableStateOf<User?>(null) }
+                    var selectedAddress by remember { mutableStateOf<Address?>(null) }
                     var selectedMethod by remember { mutableStateOf("") }
                     var showSuccessDialog by remember { mutableStateOf(false) }
                     var isPlacing by remember { mutableStateOf(false) }
 
-                    LaunchedEffect(Unit) {
+                    // --- Load user & address ---
+                    LaunchedEffect(userId) {
+                        if (userId.isNullOrEmpty()) return@LaunchedEffect
+
                         try {
-                            val response = RetrofitClient.apiService.getUsers()
-                            if (response.isSuccessful) {
-                                val users = response.body() ?: emptyList()
+                            // --- Load user ---
+                            val userResp = RetrofitClient.apiService.getUsers()
+                            if (userResp.isSuccessful) {
+                                val users = userResp.body() ?: emptyList()
                                 user = users.find { it._id == userId }
+                            } else {
+                                Log.e("OrderScreen", "Failed to load users: ${userResp.code()}")
                             }
-                        } catch (_: Exception) {}
+
+                            // --- Load default address ---
+                            val addrResp = RetrofitClient.addressService.getDefaultAddress(userId)
+                            if (addrResp.isSuccessful) {
+                                selectedAddress = addrResp.body()
+                            }
+
+                            // --- Fallback: nếu chưa có address, lấy từ user.address ---
+                            if (selectedAddress == null && user != null) {
+                                selectedAddress = Address(
+                                    _id = "temp",
+                                    userId = user!!._id ?: "",
+                                    name = user!!.name ?: "",
+                                    phone = user!!.phone ?: "",
+                                    address = user!!.address ?: "",
+                                )
+                                Log.d("OrderScreen", "Using fallback address from user: $selectedAddress")
+                            }
+
+                        } catch (e: Exception) {
+                            Log.e("OrderScreen", "Error loading user/address: ${e.message}")
+                        }
                     }
 
                     user?.let { currentUser ->
-                        val context = LocalContext.current
 
                         OrderContent(
                             selectedItems = selectedItems,
-                            user = currentUser,
+                            selectedAddress = selectedAddress,
+                            onAddressSelect = { selectedAddress = it },
                             selectedMethod = selectedMethod,
                             onMethodChange = { selectedMethod = it },
                             isPlacing = isPlacing,
@@ -95,40 +124,41 @@ class OrderScreen : ComponentActivity() {
                                     return@OrderContent
                                 }
 
-                                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                                val currentDate = dateFormat.format(Date())
+                                if (selectedAddress == null) {
+                                    Toast.makeText(context, "Vui lòng chọn địa chỉ giao hàng", Toast.LENGTH_SHORT).show()
+                                    return@OrderContent
+                                }
 
                                 val orderItems = selectedItems.map { ci ->
                                     OrderItem(
                                         orderDetailId = UUID.randomUUID().toString(),
-                                        productId = ci.productId,
-                                        name = ci.name,
-                                        image = ci.image,
+                                        productId = ci.productId ?: "",
+                                        name = ci.name ?: "",
+                                        image = ci.image ?: "",
                                         price = ci.price,
                                         quantity = ci.quantity,
                                         size = ci.size ?: "",
                                         color = ci.color ?: "",
-                                        subtotal = ci.price * ci.quantity,
-                                        date = currentDate,
-                                        paymentMethod = selectedMethod,
-                                        customerName = currentUser.name,
-                                        customerPhone = currentUser.phone,
-                                        customerAddress = currentUser.address
+                                        subtotal = ci.price * ci.quantity
                                     )
                                 }
 
                                 val itemsTotal = orderItems.sumOf { it.subtotal }
 
                                 val newOrder = Order(
-                                    userId = currentUser._id!!,
+                                    orderId = "", // backend sẽ sinh ra
+                                    userId = currentUser._id ?: "",
+                                    items = orderItems,
                                     total = itemsTotal,
                                     paymentMethod = selectedMethod,
-                                    status = null,
-                                    items = orderItems
+                                    status = "Chờ xác nhận",
+                                    date = "", // backend set date
+                                    customerName = selectedAddress?.name ?: "",
+                                    customerPhone = selectedAddress?.phone ?: "",
+                                    customerAddress = selectedAddress?.address ?: ""
                                 )
 
-                                val json = Gson().toJson(newOrder)
-                                android.util.Log.d("ORDER_JSON", json)
+
 
                                 isPlacing = true
                                 CoroutineScope(Dispatchers.IO).launch {
@@ -137,7 +167,7 @@ class OrderScreen : ComponentActivity() {
                                         if (response.isSuccessful) {
                                             selectedItems.forEach {
                                                 try {
-                                                    RetrofitClient.apiService.deleteCartItemById(it.itemId)
+                                                    RetrofitClient.apiService.deleteCartItemById(it.itemId ?: "")
                                                 } catch (_: Exception) {}
                                             }
                                             withContext(Dispatchers.Main) {
@@ -145,15 +175,12 @@ class OrderScreen : ComponentActivity() {
                                                 showSuccessDialog = true
                                             }
                                         } else {
-                                            val errBody = response.errorBody()?.string()
-                                            android.util.Log.e("ORDER_ERR", "code=${response.code()} body=$errBody")
                                             withContext(Dispatchers.Main) {
                                                 isPlacing = false
                                                 Toast.makeText(context, "Lỗi đặt hàng: ${response.code()}", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     } catch (e: Exception) {
-                                        android.util.Log.e("ORDER_EX", e.message ?: "exception")
                                         withContext(Dispatchers.Main) {
                                             isPlacing = false
                                             Toast.makeText(context, "Lỗi kết nối: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -161,9 +188,11 @@ class OrderScreen : ComponentActivity() {
                                     }
                                 }
                             },
-                            onBack = { finish() }
+                            onBack = { finish() },
+                            addresses = emptyList() // hiện tại không dùng list address
                         )
 
+                        // --- Dialog báo thành công ---
                         if (showSuccessDialog) {
                             Dialog(onDismissRequest = { showSuccessDialog = false }) {
                                 Box(
@@ -219,7 +248,9 @@ class OrderScreen : ComponentActivity() {
 @Composable
 fun OrderContent(
     selectedItems: List<CartItem>,
-    user: User,
+    selectedAddress: Address?,
+    onAddressSelect: (Address) -> Unit,
+    addresses: List<Address>,
     selectedMethod: String,
     onMethodChange: (String) -> Unit,
     isPlacing: Boolean,
@@ -228,7 +259,7 @@ fun OrderContent(
 ) {
     val context = LocalContext.current
     val totalProductPrice = selectedItems.sumOf { it.price * it.quantity }
-    val grandTotal = totalProductPrice // Không cộng phí ship
+    val grandTotal = totalProductPrice
 
     Scaffold(
         topBar = {
@@ -273,21 +304,30 @@ fun OrderContent(
         ) {
             item {
                 Text("Địa chỉ", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null)
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
-                        Text(user.name, fontWeight = FontWeight.Bold)
-                        Text(user.phone)
-                        Text(user.address)
+                if (selectedAddress != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null)
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(selectedAddress.name, fontWeight = FontWeight.Bold)
+                            Text(selectedAddress.phone)
+                            Text(selectedAddress.address)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text("Thêm", color = Color(0xFF1976D2),
+                            modifier = Modifier.clickable {
+                                val intent = Intent(context, AddressScreen::class.java)
+                                context.startActivity(intent)
+                            }
+                        )
                     }
-                    Spacer(Modifier.weight(1f))
-                    Text("Thêm", color = Color(0xFF1976D2))
+                } else {
+                    Text("Vui lòng chọn địa chỉ", color = Color.Gray)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Phương thức thanh toán", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
 
-                val paymentMethods = listOf("Thanh toán khi nhận hàng")
+                val paymentMethods = listOf("Thanh toán khi nhận hàng", "Thanh toán vnpay", "Chuyển khoản ngân hàng")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     paymentMethods.forEach { label ->
                         Row(
@@ -316,25 +356,61 @@ fun OrderContent(
         }
     }
 }
+@Composable
+fun OrderItemRow(item: CartItem) {
+    val context = LocalContext.current
 
-        @Composable
-        fun OrderItemRow(item: CartItem) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    Image(
-                        painter = rememberAsyncImagePainter(item.image),
-                        contentDescription = item.name,
-                        modifier = Modifier.size(90.dp).clip(RoundedCornerShape(12.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(item.name, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("Size: ${item.size} | Màu: ${item.color}", fontSize = 13.sp, color = Color.Gray)
-                        Text("Giá: ${item.price.toDecimalString()} VND", fontSize = 14.sp, color = Color(0xFFe53935), fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                        Text("Số lượng: ${item.quantity}", fontSize = 14.sp)
-                    }
+    val imageRequest = remember(item.image) {
+        coil.request.ImageRequest.Builder(context)
+            .data(
+                if (item.image?.startsWith("data:image") == true) {
+                    android.util.Base64.decode(item.image.substringAfter("base64,"), android.util.Base64.DEFAULT)
+                } else {
+                    item.image
                 }
-                Divider(color = Color.LightGray, thickness = 1.dp)
+            )
+            .crossfade(true)
+            .build()
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+        ) {
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = item.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                placeholder = painterResource(id = R.drawable.logo),
+                error = painterResource(id = R.drawable.logo)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    item.name ?: "",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text("Size: ${item.size} | Màu: ${item.color}", fontSize = 13.sp, color = Color.Gray)
+                Text(
+                    "Giá: ${item.price.toDecimalString()} VND",
+                    fontSize = 14.sp,
+                    color = Color(0xFFe53935),
+                    fontWeight = FontWeight.Medium
+                )
+                Text("Số lượng: ${item.quantity}", fontSize = 14.sp)
             }
         }
+        Divider(color = Color.LightGray, thickness = 1.dp)
+    }
+}
+

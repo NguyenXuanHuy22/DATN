@@ -31,8 +31,10 @@ import com.example.datn.ui.theme.DATNTheme
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.datn.utils.toDecimalString
 import kotlinx.coroutines.launch
 import com.example.datn.ProductRepository
@@ -138,14 +140,16 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
             else -> {
                 LazyColumn(modifier = Modifier.padding(padding)) {
                     items(cartItems) { item ->
+                        val id = item.itemId.orEmpty()   // <- ép về String non-null
+
                         CartItemRow(
                             item = item,
-                            isSelected = selectedItems.contains(item.itemId),
-                            onToggleSelect = { viewModel.toggleItemSelection(item.itemId) },
-                            onDelete = { viewModel.deleteItem(item.itemId) },
+                            isSelected = selectedItems.contains(id),
+                            onToggleSelect = { viewModel.toggleItemSelection(id) },
+                            onDelete = { viewModel.deleteItem(id) },
                             onQuantityChange = { newQty ->
                                 scope.launch {
-                                    viewModel.updateItemQuantity(item.itemId, newQty)
+                                    viewModel.updateItemQuantity(id, newQty)
                                 }
                             }
                         )
@@ -169,6 +173,26 @@ fun CartItemRow(
     val scope = rememberCoroutineScope()
     val productRepository = ProductRepository()
 
+    // ✅ Tạo ImageRequest giống Box
+    val imageRequest = remember(item.image) {
+        item.image?.let { base64String ->
+            if (base64String.startsWith("data:image")) {
+                val pureBase64 = base64String.substringAfter("base64,")
+                val decodedBytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+                coil.request.ImageRequest.Builder(context)
+                    .data(decodedBytes)
+                    .crossfade(true)
+                    .build()
+            } else {
+                coil.request.ImageRequest.Builder(context)
+                    .data(item.image ?: "") // ✅ ép null thành ""
+                    .crossfade(true)
+                    .build()
+            }
+        }
+    }
+
+
     Column {
         Row(
             modifier = Modifier
@@ -183,20 +207,34 @@ fun CartItemRow(
             )
 
             // Ảnh sản phẩm
-            Image(
-                painter = rememberAsyncImagePainter(item.image),
-                contentDescription = item.name,
-                modifier = Modifier
-                    .size(90.dp)
-                    .padding(end = 12.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
+            if (imageRequest != null) {
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(90.dp)
+                        .padding(end = 12.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    placeholder = painterResource(id = R.drawable.logo),
+                    error = painterResource(id = R.drawable.logo)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "Placeholder",
+                    modifier = Modifier
+                        .size(90.dp)
+                        .padding(end = 12.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Column(modifier = Modifier.weight(1f)) {
                 // Tên sản phẩm (giới hạn 1 dòng)
                 Text(
-                    text = item.name,
+                    text = item.name.orEmpty(),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
@@ -240,7 +278,11 @@ fun CartItemRow(
                     IconButton(onClick = {
                         scope.launch {
                             try {
-                                val maxQty = productRepository.getMaxQuantity(item.productId, item.size, item.color)
+                                val maxQty = productRepository.getMaxQuantity(
+                                    item.productId.orEmpty(),
+                                    item.size.orEmpty(),
+                                    item.color.orEmpty()
+                                )
                                 if (item.quantity < maxQty) {
                                     onQuantityChange(item.quantity + 1)
                                 } else {
@@ -270,6 +312,7 @@ fun CartItemRow(
         Divider(color = Color.LightGray, thickness = 1.dp)
     }
 }
+
 
 @Composable
 fun BottomNavigationBarCart(currentScreen: String = "Cart") {

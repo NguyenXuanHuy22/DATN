@@ -1,5 +1,6 @@
 package com.example.datn
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -21,7 +22,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -39,40 +54,66 @@ class Account : ComponentActivity() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun AccountScreen() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-
-    var showEditDialog by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    val userRole = remember { mutableStateOf("") }
-    val userId = sharedPreferences.getString("userId", "") ?: ""
     val scope = rememberCoroutineScope()
 
-    // Lấy thông tin người dùng
-    LaunchedEffect(Unit) {
-        if (userId.isNotEmpty()) {
-            try {
-                val response = RetrofitClient.apiService.getUsers()
-                if (response.isSuccessful) {
-                    response.body()?.firstOrNull { it._id == userId }?.let { user ->
-                        name = user.name
-                        email = user.email
-                        phone = user.phone
-                        address = user.address
-                        imageUrl = user.avatar
-                        password = user.password
-                        userRole.value = user.role
-                    }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
+    val userRole = remember { mutableStateOf("") }
+    val userId = sharedPreferences.getString("userId", "") ?: ""
+
+    // Hàm load dữ liệu user
+    suspend fun loadUser() {
+        try {
+            val response = RetrofitClient.apiService.getUsers()
+            if (response.isSuccessful) {
+                response.body()?.firstOrNull { it._id == userId }?.let { user ->
+                    name = user.name ?: ""
+                    email = user.email ?: ""
+                    phone = user.phone ?: ""
+                    address = user.address ?: ""
+                    password = user.password ?: ""
+                    imageUrl = user.avatar ?: ""
+                    userRole.value = user.role ?: "user"
                 }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Lỗi tải thông tin: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Launcher để mở EditProfileScreen và nhận kết quả
+    val editProfileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // Load lại dữ liệu khi quay về
+            scope.launch { loadUser() }
+        }
+    }
+
+    // Load dữ liệu lần đầu
+    LaunchedEffect(Unit) {
+        scope.launch { loadUser() }
+    }
+
+    // Chuyển Base64 sang Bitmap
+    val avatarBitmap = remember(imageUrl) {
+        imageUrl.takeIf { it.isNotBlank() }?.let { base64 ->
+            try {
+                val cleanBase64 = base64.substringAfter("base64,", base64)
+                val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             } catch (e: Exception) {
-                Toast.makeText(context, "Lỗi tải thông tin: ${e.message}", Toast.LENGTH_SHORT).show()
+                null
             }
         }
     }
@@ -100,13 +141,22 @@ fun AccountScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = "Avatar",
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                )
+                if (avatarBitmap != null) {
+                    Image(
+                        bitmap = avatarBitmap.asImageBitmap(),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color.Gray)
+                    )
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(text = name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -119,12 +169,11 @@ fun AccountScreen() {
 
             AccountMenuItem(icon = Icons.Default.Edit, label = "Chỉnh sửa thông tin") {
                 val intent = Intent(context, EditProfile::class.java)
-                context.startActivity(intent)
+                editProfileLauncher.launch(intent)
             }
             Divider()
 
             if (userRole.value == "user") {
-
                 AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Lịch sử mua hàng") {
                     val intent = Intent(context, OrderHistoryScreen::class.java)
                     context.startActivity(intent)
@@ -135,7 +184,6 @@ fun AccountScreen() {
                     context.startActivity(intent)
                 }
                 Divider()
-
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -148,75 +196,10 @@ fun AccountScreen() {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 context.startActivity(intent)
             }
-
-            // Dialog chỉnh sửa thông tin
-//            if (showEditDialog) {
-//                AlertDialog(
-//                    onDismissRequest = { showEditDialog = false },
-//                    title = { Text("Chỉnh sửa thông tin") },
-//                    text = {
-//                        Column {
-//                            OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("Link ảnh đại diện") })
-//                            Spacer(Modifier.height(8.dp))
-//                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Họ và tên") })
-//                            Spacer(Modifier.height(8.dp))
-//                            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-//                            Spacer(Modifier.height(8.dp))
-//                            OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Số điện thoại") })
-//                            Spacer(Modifier.height(8.dp))
-//                            OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Địa chỉ") })
-//                            Spacer(Modifier.height(8.dp))
-//                            OutlinedTextField(
-//                                value = password,
-//                                onValueChange = { password = it },
-//                                label = { Text("Mật khẩu") },
-//                                visualTransformation = PasswordVisualTransformation()
-//                            )
-//                        }
-//                    },
-//                    confirmButton = {
-//                        TextButton(onClick = {
-//                            if (userId.isNotEmpty()) {
-//                                val updatedUser = User(
-//                                    id = userId,
-//                                    name = name,
-//                                    email = email,
-//                                    phone = phone,
-//                                    password = password,
-//                                    address = address,
-//                                    avatar = imageUrl,
-//                                    role = userRole.value
-//                                )
-//                                // tét
-//
-//                                scope.launch {
-//                                    try {
-//                                        val response = RetrofitClient.apiService.updateUser(userId, updatedUser)
-//                                        if (response.isSuccessful) {
-//                                            Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
-//                                            showEditDialog = false
-//                                        } else {
-//                                            Toast.makeText(context, "Lỗi cập nhật", Toast.LENGTH_SHORT).show()
-//                                        }
-//                                    } catch (e: Exception) {
-//                                        Toast.makeText(context, "Lỗi mạng: ${e.message}", Toast.LENGTH_SHORT).show()
-//                                    }
-//                                }
-//                            }
-//                        }) {
-//                            Text("Lưu")
-//                        }
-//                    },
-//                    dismissButton = {
-//                        TextButton(onClick = { showEditDialog = false }) {
-//                            Text("Hủy")
-//                        }
-//                    }
-//                )
-//            }
         }
     }
 }
+
 
 @Composable
 fun AccountMenuItem(
