@@ -3,12 +3,14 @@ package com.example.datn
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,13 +25,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.datn.ui.theme.DATNTheme
+
 
 class AddressScreen : ComponentActivity() {
     private val viewModel: AddressViewModel by viewModels()
@@ -60,7 +66,12 @@ class AddressScreen : ComponentActivity() {
                     AddressListScreen(
                         viewModel = viewModel,
                         onAddressSelected = { selected ->
-                            // TODO: trả địa chỉ selected về OrderScreen
+                            Toast.makeText(
+                                this,
+                                "Đã chọn địa chỉ: ${selected.address}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            // TODO: trả địa chỉ selected về OrderScreen nếu cần
                         }
                     )
                 }
@@ -77,14 +88,14 @@ fun AddressListScreen(
     viewModel: AddressViewModel,
     onAddressSelected: (selectedAddress: Address) -> Unit
 ) {
-    val userAddressList = viewModel.userAddress.value // Đây là List<Address> chứa 1 item
-    val addresses = viewModel.addresses.value
+    val userAddressList = viewModel.userAddress.value // List<Address> địa chỉ chính
+    val addresses = viewModel.addresses.value          // List<Address> các địa chỉ khác
     val isLoading = viewModel.isLoading.value
     val errorMessage = viewModel.errorMessage.value
 
     var selectedAddressId by remember { mutableStateOf<String?>(null) }
 
-    val context = LocalContext.current // fix LocalContext
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -113,14 +124,22 @@ fun AddressListScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         when {
-            isLoading -> CircularProgressIndicator()
-            errorMessage.isNotEmpty() -> Text(errorMessage, color = MaterialTheme.colorScheme.error)
+            isLoading -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) { CircularProgressIndicator() }
+
+            errorMessage.isNotEmpty() -> Text(
+                errorMessage,
+                color = MaterialTheme.colorScheme.error
+            )
+
             else -> LazyColumn {
                 // --- 1. Địa chỉ chính của user ---
                 items(userAddressList) { addr ->
                     AddressCard(
                         address = addr,
-                        selectedAddressId = selectedAddressId,
+                        isSelected = selectedAddressId == addr._id,
                         onSelect = {
                             selectedAddressId = addr._id
                             onAddressSelected(addr)
@@ -135,7 +154,7 @@ fun AddressListScreen(
                 items(addresses) { addr ->
                     AddressCard(
                         address = addr,
-                        selectedAddressId = selectedAddressId,
+                        isSelected = selectedAddressId == addr._id,
                         onSelect = {
                             selectedAddressId = addr._id
                             onAddressSelected(addr)
@@ -163,44 +182,52 @@ fun AddressListScreen(
     }
 }
 
-
 @Composable
 fun AddressCard(
     address: Address,
-    selectedAddressId: String?,
+    isSelected: Boolean = false,
     onSelect: () -> Unit,
     onEdit: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = selectedAddressId == address._id,
-                    onCheckedChange = { onSelect() }
-                )
+            Text("Tên: ${address.name}", fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Địa chỉ: ${address.address}")
+            Spacer(modifier = Modifier.height(2.dp))
+            Text("Số điện thoại: ${address.phone}")
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onSelect,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                    )
+                ) {
+                    Text(if (isSelected) "Đã chọn" else "Chọn")
+                }
                 Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text("Tên: ${address.name}")
-                    Text("Địa chỉ: ${address.address}")
-                    Text("Số điện thoại: ${address.phone}")
+                TextButton(
+                    onClick = onEdit
+                ) {
+                    Text("Sửa", color = MaterialTheme.colorScheme.primary)
                 }
             }
-
-            Text(
-                "Sửa",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { onEdit() }
-            )
         }
     }
 }
+
+

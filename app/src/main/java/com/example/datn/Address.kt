@@ -7,3 +7,7 @@ data class Address(
     val address: String,
     val phone: String,
 )
+
+data class MessageResponse(
+    val message: String
+)
