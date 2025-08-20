@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,7 +37,7 @@ fun IntroScreenContent() {
     val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = rememberAsyncImagePainter("https://i.pinimg.com/736x/ea/6f/4e/ea6f4e04daed8333cb8d76518ffd35d8.jpg"),
+            painter = painterResource(id = R.drawable.intro),
             contentDescription = "Intro Image",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -48,7 +49,7 @@ fun IntroScreenContent() {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Define\nyourself in\nyour unique\nway.",
+                text = "",
                 fontSize = 38.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black

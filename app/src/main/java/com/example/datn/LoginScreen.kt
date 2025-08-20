@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -68,122 +69,138 @@ fun LoginScreenContent() {
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = {
-                email = it
-                emailError = ""
-            },
-            label = { Text("Email") },
-            placeholder = { Text("Nhập địa chỉ email của bạn") },
-            isError = emailError.isNotEmpty(),
-            supportingText = {
-                if (emailError.isNotEmpty())
-                    Text(emailError, color = MaterialTheme.colorScheme.error)
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = {
-                password = it
-                passwordError = ""
-            },
-            label = { Text("Mật khẩu") },
-            placeholder = { Text("Nhập mật khẩu của bạn") },
-            isError = passwordError.isNotEmpty(),
-            supportingText = {
-                if (passwordError.isNotEmpty())
-                    Text(passwordError, color = MaterialTheme.colorScheme.error)
-            },
+        // Bọc trong Card cho đẹp hơn
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = icon, contentDescription = null)
-                }
-            },
-            singleLine = true,
-        )
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.Center,   //  đẩy ra giữa theo chiều dọc
+                horizontalAlignment = Alignment.CenterHorizontally //  căn giữa theo chiều ngang
+            ) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        emailError = ""
+                    },
+                    label = { Text("Email") },
+                    placeholder = { Text("Nhập địa chỉ email của bạn") },
+                    isError = emailError.isNotEmpty(),
+                    supportingText = {
+                        if (emailError.isNotEmpty())
+                            Text(emailError, color = MaterialTheme.colorScheme.error)
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-        Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-        Button(
-            onClick = {
-                emailError = ""
-                passwordError = ""
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        passwordError = ""
+                    },
+                    label = { Text("Mật khẩu") },
+                    placeholder = { Text("Nhập mật khẩu của bạn") },
+                    isError = passwordError.isNotEmpty(),
+                    supportingText = {
+                        if (passwordError.isNotEmpty())
+                            Text(passwordError, color = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = icon, contentDescription = null)
+                        }
+                    },
+                    singleLine = true,
+                )
 
-                var hasError = false
+                Spacer(modifier = Modifier.height(24.dp))
 
-                if (email.isBlank()) {
-                    emailError = "Vui lòng nhập email"
-                    hasError = true
-                }
-                if (password.isBlank()) {
-                    passwordError = "Vui lòng nhập mật khẩu"
-                    hasError = true
-                }
+                Button(
+                    onClick = {
+                        emailError = ""
+                        passwordError = ""
 
-                if (hasError) return@Button
+                        var hasError = false
 
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val response = RetrofitClient.apiService.getUsers()
-                        withContext(Dispatchers.Main) {
-                            if (response.isSuccessful) {
-                                val users = response.body() ?: emptyList()
-                                val user = users.find { u -> u.email == email && u.password == password }
+                        if (email.isBlank()) {
+                            emailError = "Vui lòng nhập email"
+                            hasError = true
+                        }
+                        if (password.isBlank()) {
+                            passwordError = "Vui lòng nhập mật khẩu"
+                            hasError = true
+                        }
 
-                                if (user != null) {
-                                    if (user.role == "locked") {
-                                        Toast.makeText(context, "Tài khoản của bạn đã bị khóa", Toast.LENGTH_LONG).show()
-                                    } else if (user.role == "user") {
-                                        // Save userId and role to SharedPreferences
-                                        context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-                                            .edit()
-                                            .clear()
-                                            .putString("userId", user._id)
-                                            .putString("userRole", user.role)
-                                            .apply()
+                        if (hasError) return@Button
 
-                                        Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
-                                        val intent = Intent(context, Home::class.java)
-                                        context.startActivity(intent)
-                                        (context as ComponentActivity).finish()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val response = RetrofitClient.apiService.getUsers()
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful) {
+                                        val users = response.body() ?: emptyList()
+                                        val user = users.find { u -> u.email == email && u.password == password }
+
+                                        if (user != null) {
+                                            if (user.role == "locked") {
+                                                Toast.makeText(context, "Tài khoản của bạn đã bị khóa", Toast.LENGTH_LONG).show()
+                                            } else if (user.role == "user") {
+                                                // Save userId and role to SharedPreferences
+                                                context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                                                    .edit()
+                                                    .clear()
+                                                    .putString("userId", user._id)
+                                                    .putString("userRole", user.role)
+                                                    .apply()
+
+                                                Toast.makeText(context, "Đăng nhập thành công", Toast.LENGTH_SHORT).show()
+                                                val intent = Intent(context, Home::class.java)
+                                                context.startActivity(intent)
+                                                (context as ComponentActivity).finish()
+                                            } else {
+                                                Toast.makeText(context, "Vai trò người dùng không hợp lệ", Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            emailError = "Email hoặc mật khẩu không đúng"
+                                            passwordError = "Email hoặc mật khẩu không đúng"
+                                        }
                                     } else {
-                                        Toast.makeText(context, "Vai trò người dùng không hợp lệ", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Lỗi lấy danh sách người dùng: ${response.message()}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
-                                } else {
-                                    emailError = "Email hoặc mật khẩu không đúng"
-                                    passwordError = "Email hoặc mật khẩu không đúng"
                                 }
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Lỗi lấy danh sách người dùng: ${response.message()}",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A3AFF)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Đăng nhập", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A3AFF)),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text("Đăng nhập", color = Color.White)
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -205,3 +222,4 @@ fun LoginScreenContent() {
         }
     }
 }
+
