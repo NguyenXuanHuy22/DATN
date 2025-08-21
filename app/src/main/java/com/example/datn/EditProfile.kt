@@ -169,12 +169,6 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = it }, label = { Text("SĐT") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(address, { address = it }, label = { Text("Địa chỉ") }, modifier = Modifier.fillMaxWidth())
-//        OutlinedTextField(
-//            password, { password = it },
-//            label = { Text("Mật khẩu") },
-//            modifier = Modifier.fillMaxWidth(),
-//            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-//        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -198,7 +192,6 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
                             email = email.text,
                             phone = phone.text,
                             address = address.text,
-                            password = password.text.takeIf { it.isNotBlank() },
                             avatar = avatarBase64 ?: user?.avatar
                         )
 

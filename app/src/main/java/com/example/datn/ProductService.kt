@@ -32,6 +32,13 @@ interface ProductService {
     @POST("api/users/register")
     suspend fun registerUser(@Body user: User): Response<RegisterResponse>
 
+    // 👉 Đổi mật khẩu
+    @POST("api/users/{id}/change-password")
+    suspend fun changePassword(
+        @Path("id") id: String,
+        @Body request: ChangePasswordRequest
+    ): Response<ChangePasswordResponse>
+
     // Update User bình thường (JSON)
     @PUT("api/users/{id}")
     suspend fun updateUser(
