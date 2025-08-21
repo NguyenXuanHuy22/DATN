@@ -1,5 +1,6 @@
 package com.example.datn
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
 import android.util.Log
@@ -7,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,17 +60,42 @@ class OrderDetailActivity : ComponentActivity() {
             return
         }
 
+        // SharedPreferences lấy thông tin user
+        val prefs = getSharedPreferences("auth", MODE_PRIVATE)
+        val userId = prefs.getString("userId", "") ?: ""
+        val username = prefs.getString("username", "Người dùng") ?: "Người dùng"
+        val avatar = prefs.getString("avatar", "") ?: ""
+
         val viewModel: OrderDetailViewModel = ViewModelProvider(
             this,
             OrderDetailViewModelFactory(orderId)
         )[OrderDetailViewModel::class.java]
+
+        // RegisterForActivityResult để chờ ReviewActivity trả kết quả
+        val reviewLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                viewModel.markOrderAsReviewed()
+            }
+        }
 
         setContent {
             DATNTheme {
                 OrderDetailScreen(
                     uiState = viewModel.uiState,
                     onCancelConfirmed = { viewModel.cancelOrder() },
-                    onBack = { finish() }
+                    onBack = { finish() },
+                    onReviewed = { productId ->
+                        val intent = Intent(this, ReviewActivity::class.java).apply {
+                            putExtra("productId", productId)
+                            putExtra("orderId", orderId)
+                            putExtra("userId", userId)
+                            putExtra("username", username)
+                            putExtra("avatar", avatar)
+                        }
+                        reviewLauncher.launch(intent)
+                    }
                 )
             }
         }
@@ -80,7 +108,8 @@ class OrderDetailActivity : ComponentActivity() {
 fun OrderDetailScreen(
     uiState: OrderDetailUiState,
     onCancelConfirmed: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onReviewed: (String) -> Unit
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
 
@@ -150,6 +179,35 @@ fun OrderDetailScreen(
                             order.items.forEach { item ->
                                 OrderItemRow(item)
                             }
+
+                            // Nút đánh giá đơn hàng ở cuối danh sách
+                            if (order.status == "Đã giao" && order.isReviewed != true) {
+                                Button(
+                                    onClick = {
+                                        // chỉ cần truyền productId của sản phẩm đầu tiên (hoặc null)
+                                        val firstProductId = order.items.firstOrNull()?.productId ?: ""
+                                        onReviewed(firstProductId)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Text("Đánh giá đơn hàng")
+                                }
+                            }
+
+                            // Nếu đã đánh giá thì hiện thông báo
+                            if (order.status == "Đã giao" && order.isReviewed == true) {
+                                Text(
+                                    "Bạn đã đánh giá đơn hàng này",
+                                    color = Color.Gray,
+                                    fontStyle = FontStyle.Italic,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
 
                         // Tổng tiền & thanh toán
@@ -182,17 +240,6 @@ fun OrderDetailScreen(
                                         .padding(8.dp)
                                 ) {
                                     Text("Huỷ đơn")
-                                }
-                            }
-
-                            "Đã giao" -> {
-                                Button(
-                                    onClick = { /* TODO: Đánh giá sản phẩm */ },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp)
-                                ) {
-                                    Text("Đánh giá")
                                 }
                             }
 
@@ -237,6 +284,8 @@ fun OrderDetailScreen(
         }
     }
 }
+
+
 @Composable
 fun OrderItemRow(item: OrderItem) {
     val context = LocalContext.current

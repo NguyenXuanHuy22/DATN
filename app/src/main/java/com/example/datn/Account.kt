@@ -173,7 +173,6 @@ fun AccountScreen() {
             }
             Divider()
 
-            if (userRole.value == "user") {
                 AccountMenuItem(icon = Icons.Default.BreakfastDining, label = "Lịch sử mua hàng") {
                     val intent = Intent(context, OrderHistoryScreen::class.java)
                     context.startActivity(intent)
@@ -184,10 +183,23 @@ fun AccountScreen() {
                     context.startActivity(intent)
                 }
                 Divider()
+
+            AccountMenuItem(icon = Icons.Default.LockReset, label = "Đổi mật khẩu") {
+                val intent = Intent(context, CartScreen::class.java)
+                context.startActivity(intent)
             }
+            Divider()
 
             Spacer(modifier = Modifier.height(16.dp))
             Divider(thickness = 8.dp, color = Color.LightGray)
+
+            AccountMenuItem(icon = Icons.Default.LocationOn, label = "Địa chỉ cửa hàng") {
+                val intent = Intent(context, CartScreen::class.java)
+                context.startActivity(intent)
+            }
+            Divider()
+
+
 
             AccountMenuItem(icon = Icons.Default.Logout, label = "Đăng xuất", color = Color.Red) {
                 sharedPreferences.edit().clear().apply()

@@ -1,6 +1,7 @@
 package com.example.datn
 
 import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -98,6 +99,28 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                 filteredProducts.isNotEmpty() -> {
                     LazyColumn {
                         items(filteredProducts) { product ->
+                            val context = LocalContext.current
+
+                            // ✅ Tạo ImageRequest giống ProductItem
+                            val imageRequest = remember(product.image) {
+                                product.image?.let { base64String ->
+                                    if (base64String.startsWith("data:image")) {
+                                        val pureBase64 = base64String.substringAfter("base64,")
+                                        val decodedBytes =
+                                            android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+                                        coil.request.ImageRequest.Builder(context)
+                                            .data(decodedBytes)
+                                            .crossfade(true)
+                                            .build()
+                                    } else {
+                                        coil.request.ImageRequest.Builder(context)
+                                            .data(product.image) // nếu backend trả về URL
+                                            .crossfade(true)
+                                            .build()
+                                    }
+                                }
+                            }
+
                             Row(
                                 Modifier
                                     .fillMaxWidth()
@@ -108,17 +131,27 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                                     }
                                     .padding(8.dp)
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(product.image)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = product.name,
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(RoundedCornerShape(10.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                                if (imageRequest != null) {
+                                    AsyncImage(
+                                        model = imageRequest,
+                                        contentDescription = product.name,
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(10.dp)),
+                                        contentScale = ContentScale.Crop,
+                                        placeholder = painterResource(id = R.drawable.logo),
+                                        error = painterResource(id = R.drawable.logo)
+                                    )
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.logo),
+                                        contentDescription = "Placeholder",
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                }
+
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(product.name, fontWeight = FontWeight.Bold)
@@ -126,6 +159,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                                 }
                             }
                         }
+
                     }
                 }
 

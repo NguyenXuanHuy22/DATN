@@ -169,12 +169,12 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = it }, label = { Text("SĐT") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(address, { address = it }, label = { Text("Địa chỉ") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(
-            password, { password = it },
-            label = { Text("Mật khẩu") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-        )
+//        OutlinedTextField(
+//            password, { password = it },
+//            label = { Text("Mật khẩu") },
+//            modifier = Modifier.fillMaxWidth(),
+//            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+//        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

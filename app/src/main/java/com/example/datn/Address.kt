@@ -6,8 +6,10 @@ data class Address(
     val name: String,
     val address: String,
     val phone: String,
+    val isDefault: Boolean = true
 )
 
 data class MessageResponse(
-    val message: String
+    val message: String,
+    val user: User
 )

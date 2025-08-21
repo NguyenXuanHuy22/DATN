@@ -20,6 +20,11 @@
             android:exported="false"
             android:label="Chi tiết đơn hàng"
             android:theme="@style/Theme.DATN"/>
+        <activity
+            android:name=".ReviewActivity"
+            android:exported="false"
+            android:label="ReviewActivity"
+            android:theme="@style/Theme.DATN"/>
 
         <activity
             android:name=".AddressScreen"

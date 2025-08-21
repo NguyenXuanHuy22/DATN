@@ -16,7 +16,7 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         fetchOrderDetail()
     }
 
-    // Lấy chi tiết đơn hàng
+    // Lấy chi tiết đơn hàng từ API
     private fun fetchOrderDetail() {
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true)
@@ -71,11 +71,37 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         }
     }
 
+    // Đánh dấu sản phẩm đã được đánh giá
+    fun markOrderAsReviewed() {
+        uiState = uiState.copy(
+            order = uiState.order?.copy(isReviewed = true)
+        )
+    }
 
+
+    fun markProductAsReviewed(productId: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.commentService.markProductAsReviewed(orderId, productId)
+                if (response.isSuccessful) {
+                    val updatedOrder = uiState.order?.copy(
+                        items = uiState.order?.items?.map { item ->
+                            if (item.productId == productId) {
+                                item.copy(isReviewed = true)
+                            } else item
+                        } ?: emptyList()
+                    )
+                    uiState = uiState.copy(order = updatedOrder)
+                }
+            } catch (_: Exception) {}
+        }
+    }
 }
 
 data class OrderDetailUiState(
     val order: Order? = null,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isReviewed: Boolean = false // trạng thái đã đánh giá
 )
+

@@ -327,26 +327,45 @@ fun OrderContent(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Phương thức thanh toán", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
 
-                val paymentMethods = listOf("Thanh toán khi nhận hàng", "Thanh toán vnpay", "Chuyển khoản ngân hàng")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                val paymentMethods = listOf(
+                    "Thanh toán khi nhận hàng",
+                    "Chuyển khoản ngân hàng"
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     paymentMethods.forEach { label ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .weight(1f) // ✅ chia đều không gian
                                 .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { onMethodChange(label) }
+                                .padding(horizontal = 8.dp, vertical = 6.dp) // padding gọn hơn để text không bị tràn
                         ) {
                             RadioButton(
                                 selected = selectedMethod == label,
                                 onClick = { onMethodChange(label) },
-                                colors = RadioButtonDefaults.colors(selectedColor = Color.Black, unselectedColor = Color.Gray)
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Color.Black,
+                                    unselectedColor = Color.Gray
+                                )
                             )
-                            Text(label, modifier = Modifier.padding(start = 4.dp))
+                            Text(
+                                text = label,
+                                modifier = Modifier.padding(start = 4.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis // ✅ nếu text quá dài thì "..."
+                            )
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
 

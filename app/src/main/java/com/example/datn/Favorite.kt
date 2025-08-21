@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,6 +39,7 @@ import coil.compose.AsyncImage
 import com.example.datn.ui.theme.DATNTheme
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 
 
@@ -154,6 +156,28 @@ fun FavoriteItem(
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    // ✅ Tạo ImageRequest chung (base64 hoặc url)
+    val imageRequest = remember(product.image) {
+        product.image?.let { base64String ->
+            if (base64String.startsWith("data:image")) {
+                val pureBase64 = base64String.substringAfter("base64,")
+                val decodedBytes =
+                    android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+                coil.request.ImageRequest.Builder(context)
+                    .data(decodedBytes)
+                    .crossfade(true)
+                    .build()
+            } else {
+                coil.request.ImageRequest.Builder(context)
+                    .data(product.image) // nếu backend trả về URL
+                    .crossfade(true)
+                    .build()
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -169,14 +193,26 @@ fun FavoriteItem(
                 .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                 .background(Color.LightGray)
         ) {
-            AsyncImage(
-                model = product.image,
-                contentDescription = product.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-            )
+            if (imageRequest != null) {
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = product.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                    placeholder = painterResource(id = R.drawable.logo),
+                    error = painterResource(id = R.drawable.logo)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "Placeholder",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                )
+            }
 
             IconButton(
                 onClick = { onDelete() },
@@ -214,6 +250,7 @@ fun FavoriteItem(
         )
     }
 }
+
 
 
 @Composable

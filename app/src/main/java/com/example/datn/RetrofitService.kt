@@ -21,5 +21,6 @@ object RetrofitClient {
     val addressService: AddressService by lazy {
         retrofit.create(AddressService::class.java)
     }
+    val commentService: CommentService = retrofit.create(CommentService::class.java)
 }
 
