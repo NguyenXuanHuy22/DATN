@@ -26,6 +26,11 @@
             android:label="Chi tiết đơn hàng"
             android:theme="@style/Theme.DATN" />
         <activity
+            android:name=".ChangePassword"
+            android:exported="false"
+            android:label="ChangePassword"
+            android:theme="@style/Theme.DATN"/>
+        <activity
             android:name=".ReviewActivity"
             android:exported="false"
             android:label="ReviewActivity"

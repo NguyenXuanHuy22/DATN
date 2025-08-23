@@ -1,5 +1,5 @@
 package com.example.datn
 
-data class ChangePasswordResponse(
+data class ChangePasswordResponse (
     val message: String
 )

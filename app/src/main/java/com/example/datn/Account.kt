@@ -185,7 +185,7 @@ fun AccountScreen() {
                 Divider()
 
             AccountMenuItem(icon = Icons.Default.LockReset, label = "Đổi mật khẩu") {
-                val intent = Intent(context, CartScreen::class.java)
+                val intent = Intent(context, ChangePassword::class.java)
                 context.startActivity(intent)
             }
             Divider()
@@ -194,9 +194,21 @@ fun AccountScreen() {
             Divider(thickness = 8.dp, color = Color.LightGray)
 
             AccountMenuItem(icon = Icons.Default.LocationOn, label = "Địa chỉ cửa hàng") {
-                val intent = Intent(context, CartScreen::class.java)
-                context.startActivity(intent)
+                val latitude = 21.03832
+                val longitude = 105.74726
+                val label = "Cửa hàng thể thao Poly Sport FPT"
+
+                val gmmIntentUri = android.net.Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
+                val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                mapIntent.setPackage("com.google.android.apps.maps") // ưu tiên Google Maps
+
+                try {
+                    context.startActivity(mapIntent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Không tìm thấy Google Maps", Toast.LENGTH_SHORT).show()
+                }
             }
+
             Divider()
 
 

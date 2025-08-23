@@ -1,6 +1,6 @@
 package com.example.datn
 
-data class ChangePasswordRequest(
+data class ChangePasswordRequest (
     val oldPassword: String,
     val newPassword: String
 )
