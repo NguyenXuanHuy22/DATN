@@ -22,5 +22,7 @@ object RetrofitClient {
         retrofit.create(AddressService::class.java)
     }
     val commentService: CommentService = retrofit.create(CommentService::class.java)
+    val zaloPayService: ZaloPayService = retrofit.create(ZaloPayService::class.java)
+
 }
 

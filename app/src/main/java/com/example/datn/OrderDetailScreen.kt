@@ -102,7 +102,6 @@ class OrderDetailActivity : ComponentActivity() {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderDetailScreen(
@@ -179,35 +178,6 @@ fun OrderDetailScreen(
                             order.items.forEach { item ->
                                 OrderItemRow(item)
                             }
-
-                            // Nút đánh giá đơn hàng ở cuối danh sách
-                            if (order.status == "Đã giao" && order.isReviewed != true) {
-                                Button(
-                                    onClick = {
-                                        // chỉ cần truyền productId của sản phẩm đầu tiên (hoặc null)
-                                        val firstProductId = order.items.firstOrNull()?.productId ?: ""
-                                        onReviewed(firstProductId)
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
-                                    Text("Đánh giá đơn hàng")
-                                }
-                            }
-
-                            // Nếu đã đánh giá thì hiện thông báo
-                            if (order.status == "Đã giao" && order.isReviewed == true) {
-                                Text(
-                                    "Bạn đã đánh giá đơn hàng này",
-                                    color = Color.Gray,
-                                    fontStyle = FontStyle.Italic,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
                         }
 
                         // Tổng tiền & thanh toán
@@ -222,11 +192,39 @@ fun OrderDetailScreen(
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
 
-                        // Ngày đặt hàng
+                        // Ngày đặt hàng (hiển thị giờ phút giây)
                         Text(
-                            "Ngày đặt hàng: ${formatOrderDate(order.date)}",
+                            "Ngày đặt hàng: ${formatOrderDateTime(order.date)}",
                             modifier = Modifier.padding(8.dp)
                         )
+
+                        // Nút đánh giá đơn hàng
+                        // Nút đánh giá đơn hàng
+                        if (order.status == "Đã giao") {
+                            if (order.isReviewed != true) {
+                                Button(
+                                    onClick = {
+                                        val firstProductId = order.items.firstOrNull()?.productId ?: ""
+                                        onReviewed(firstProductId)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Text("Đánh giá đơn hàng")
+                                }
+                            } else {
+                                Text(
+                                    "Bạn đã đánh giá đơn hàng này",
+                                    color = Color.Gray,
+                                    fontStyle = FontStyle.Italic,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -237,9 +235,10 @@ fun OrderDetailScreen(
                                     onClick = { showCancelDialog = true },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(8.dp)
+                                        .padding(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                                 ) {
-                                    Text("Huỷ đơn")
+                                    Text("Huỷ đơn", color = Color.White)
                                 }
                             }
 
@@ -250,7 +249,8 @@ fun OrderDetailScreen(
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(8.dp)
+                                        .padding(8.dp),
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -401,17 +401,18 @@ fun OrderStatusProgressBar(status: String) {
     }
 }
 
-fun formatOrderDate(rawDate: String?): String {
-    if (rawDate.isNullOrBlank()) return "--/--/----"
+fun formatOrderDateTime(rawDate: String?): String {
+    if (rawDate.isNullOrBlank()) return "--/--/---- --:--:--"
     return try {
         val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
         val date: Date? = parser.parse(rawDate)
-        val formatter = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-        date?.let { formatter.format(it) } ?: "--/--/----"
+        val formatter = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
+        date?.let { formatter.format(it) } ?: "--/--/---- --:--:--"
     } catch (e: Exception) {
-        "--/--/----"
+        "--/--/---- --:--:--"
     }
 }
+
 

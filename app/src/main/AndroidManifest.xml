@@ -16,16 +16,20 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".ReviewListScreen"
+            android:exported="false"
+            android:label="@string/title_activity_review_list_screen"
+            android:theme="@style/Theme.DATN" />
+        <activity
             android:name=".OrderDetailActivity"
             android:exported="false"
             android:label="Chi tiết đơn hàng"
-            android:theme="@style/Theme.DATN"/>
+            android:theme="@style/Theme.DATN" />
         <activity
             android:name=".ReviewActivity"
             android:exported="false"
             android:label="ReviewActivity"
-            android:theme="@style/Theme.DATN"/>
-
+            android:theme="@style/Theme.DATN" />
         <activity
             android:name=".AddressScreen"
             android:exported="false"

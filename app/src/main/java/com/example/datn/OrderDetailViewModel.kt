@@ -51,10 +51,7 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
-                        uiState = uiState.copy(
-                            order = body.order,
-                            errorMessage = null
-                        )
+                        uiState = uiState.copy(order = body.order, errorMessage = null)
                     } else {
                         uiState = uiState.copy(errorMessage = "Huỷ đơn thành công nhưng body rỗng")
                     }
@@ -71,37 +68,54 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         }
     }
 
-    // Đánh dấu sản phẩm đã được đánh giá
+    // Đánh dấu toàn bộ đơn hàng đã được đánh giá (gọi API)
+    // Khi đánh giá xong (ReviewActivity trả về RESULT_OK) thì gọi hàm này
     fun markOrderAsReviewed() {
-        uiState = uiState.copy(
-            order = uiState.order?.copy(isReviewed = true)
-        )
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.commentService.markOrderAsReviewed(orderId)
+                if (response.isSuccessful) {
+                    val updatedOrder = response.body()
+                    if (updatedOrder != null) {
+                        uiState = uiState.copy(order = updatedOrder)
+                    } else {
+                        // fallback: tự cập nhật cờ nếu server không trả order
+                        uiState = uiState.copy(
+                            order = uiState.order?.copy(isReviewed = true)
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    errorMessage = "Lỗi đánh dấu đơn hàng đã đánh giá: ${e.message}"
+                )
+            }
+        }
     }
 
 
+
+    // Đánh dấu 1 sản phẩm trong đơn hàng đã được đánh giá (gọi API)
     fun markProductAsReviewed(productId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.commentService.markProductAsReviewed(orderId, productId)
+                val response =
+                    RetrofitClient.commentService.markProductAsReviewed(orderId, productId)
                 if (response.isSuccessful) {
-                    val updatedOrder = uiState.order?.copy(
-                        items = uiState.order?.items?.map { item ->
-                            if (item.productId == productId) {
-                                item.copy(isReviewed = true)
-                            } else item
-                        } ?: emptyList()
-                    )
-                    uiState = uiState.copy(order = updatedOrder)
+                    val updatedOrder = response.body()
+                    if (updatedOrder != null) {
+                        uiState = uiState.copy(order = updatedOrder)
+                    }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 }
+
 
 data class OrderDetailUiState(
     val order: Order? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val isReviewed: Boolean = false // trạng thái đã đánh giá
 )
-

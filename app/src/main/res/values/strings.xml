@@ -13,4 +13,5 @@
     <string name="title_activity_order_history_screen">OrderHistoryScreen</string>
     <string name="title_activity_address_screen">AddressScreen</string>
     <string name="title_activity_order_detail_screen">OrderDetailScreen</string>
+    <string name="title_activity_review_list_screen">ReviewListScreen</string>
 </resources>

@@ -2,6 +2,7 @@ package com.example.datn
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -45,8 +46,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.IconButton
 import androidx.compose.material.Icon
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.painterResource
+import kotlin.math.roundToInt
 
 class ProductDetail : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,12 +68,15 @@ class ProductDetail : ComponentActivity() {
 }
 
 @Composable
-fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewModel(),favoriteViewModel: FavoriteViewModel = viewModel() ) {
+fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewModel(),favoriteViewModel: FavoriteViewModel = viewModel(),  reviewViewModel: ReviewViewModel = viewModel() ) {
     LaunchedEffect(productId) {
         viewModel.getProductDetail(productId)
+        reviewViewModel.getCommentsByProduct(productId)
     }
 
     val productDetail by viewModel.productDetail.observeAsState()
+    val avgRating by reviewViewModel.avgRating.collectAsState()
+    val comments by reviewViewModel.comments.collectAsState()
 
     if (productDetail == null) {
         Box(
@@ -228,6 +234,37 @@ fun ProductDetailScreen(productId: String, viewModel: ProductViewModel = viewMod
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(16.dp))
+
+            // ⭐ Hiển thị đánh giá trung bình + số lượng đánh giá
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable {
+                        // Chuyển sang màn hình xem bình luận sản phẩm
+                        val intent = Intent(context, ReviewListScreen::class.java)
+                        intent.putExtra("productId", productId)
+                        context.startActivity(intent)
+                    }
+            ) {
+                // ⭐ Vẽ số sao trung bình
+                repeat(5) { index ->
+                    Icon(
+                        imageVector = if (index < avgRating.roundToInt()) Icons.Filled.Star else Icons.Outlined.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFC107), // màu vàng
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = String.format("%.1f", avgRating) + " (${comments.size} đánh giá)",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
 
             Text("Chọn size", fontWeight = FontWeight.Bold)
             Row {
