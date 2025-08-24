@@ -1,13 +1,16 @@
 package com.example.datn
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -53,10 +56,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ButtonDefaults
 import java.util.*
 
+enum class PaymentMethod(val label: String) {
+    COD("Thanh toán khi nhận hàng"),
+    VNPAY("VNPay")
+}
+
 class OrderScreen : ComponentActivity() {
-
-    private val zaloPayViewModel: ZaloPayViewModel by viewModels()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -78,12 +83,26 @@ class OrderScreen : ComponentActivity() {
                     val context = LocalContext.current
                     var user by remember { mutableStateOf<User?>(null) }
                     var selectedAddress by remember { mutableStateOf<Address?>(null) }
-                    var selectedMethod by remember { mutableStateOf("") }
+                    var selectedMethod by remember { mutableStateOf<PaymentMethod?>(null) }
                     var showSuccessDialog by remember { mutableStateOf(false) }
                     var isPlacing by remember { mutableStateOf(false) }
 
                     // Tính tổng tiền
                     val totalAmount = selectedItems.sumOf { it.price * it.quantity }
+
+                    val launcher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.StartActivityForResult()
+                    ) { result ->
+                        if (result.resultCode == Activity.RESULT_OK) {
+                            val status = result.data?.getStringExtra("status")
+                            if (status == "success") {
+                                showSuccessDialog = true
+                            } else {
+                                val rsp = result.data?.getStringExtra("response_code")
+                                Toast.makeText(context, "Thanh toán thất bại (mã $rsp)", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
 
                     // Load user & địa chỉ mặc định
                     LaunchedEffect(userId) {
@@ -121,7 +140,7 @@ class OrderScreen : ComponentActivity() {
                             onMethodChange = { selectedMethod = it },
                             isPlacing = isPlacing,
                             onPlaceOrder = {
-                                if (selectedMethod.isEmpty()) {
+                                if (selectedMethod == null) {
                                     Toast.makeText(context, "Vui lòng chọn phương thức thanh toán", Toast.LENGTH_SHORT).show()
                                     return@OrderContent
                                 }
@@ -131,48 +150,74 @@ class OrderScreen : ComponentActivity() {
                                 }
 
                                 when (selectedMethod) {
-                                    "ZaloPay" -> {
-                                        // Chuyển CartItem thành OrderItemRequest, có đủ orderDetailId + subtotal
-                                        val orderItems = selectedItems.map { it.toOrderItemRequest() }
+                                    PaymentMethod.VNPAY -> {
+                                        val orderItems = selectedItems.map { ci ->
+                                            OrderItem(
+                                                orderDetailId = UUID.randomUUID().toString(),
+                                                productId = ci.productId ?: "",
+                                                name = ci.name ?: "",
+                                                image = ci.image ?: "",
+                                                price = ci.price,
+                                                quantity = ci.quantity,
+                                                size = ci.size ?: "",
+                                                color = ci.color ?: "",
+                                                subtotal = ci.price * ci.quantity
+                                            )
+                                        }
 
-                                        zaloPayViewModel.createOrder(
-                                            amount = totalAmount,
+                                        val request = VnpCreatePaymentRequest(
                                             userId = currentUser._id ?: "",
-                                            paymentMethod = "ZaloPay",
-                                            customerName = currentUser.name ?: "",
-                                            customerPhone = currentUser.phone ?: "",
-                                            customerAddress = selectedAddress?.address ?: "",
-                                            items = orderItems
-                                        ) { orderResponse ->
-                                            val payUrl = orderResponse?.order_url
-                                            val appTransId = orderResponse?.app_trans_id
+                                            items = orderItems,
+                                            customerName = selectedAddress?.name ?: "",
+                                            customerPhone = selectedAddress?.phone ?: "",
+                                            customerAddress = selectedAddress?.address ?: ""
+                                        )
 
-                                            if (!payUrl.isNullOrBlank() && !appTransId.isNullOrBlank()) {
-                                                val intent = Intent(context, ZaloPayWebViewActivity::class.java).apply {
-                                                    putExtra("payment_url", payUrl)
-                                                    putExtra("app_trans_id", appTransId)
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            try {
+                                                val resp = RetrofitClient.apiService.createVnpayPayment(request)
+                                                if (resp.isSuccessful) {
+                                                    val body = resp.body()
+                                                    withContext(Dispatchers.Main) {
+                                                        if (body != null) {
+                                                            val intent = Intent(context, VNPayWebViewActivity::class.java).apply {
+                                                                putExtra(VNPayWebViewActivity.EXTRA_PAYMENT_URL, body.paymentUrl)
+                                                                putExtra(VNPayWebViewActivity.EXTRA_ORDER_ID, body.orderId)
+                                                            }
+                                                            launcher.launch(intent)
+                                                        } else {
+                                                            Toast.makeText(context, "Không lấy được link VNPay", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(context, "Lỗi tạo thanh toán: ${resp.code()}", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
-                                                context.startActivity(intent)
-                                            } else {
-                                                Toast.makeText(context, "Không lấy được link thanh toán", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(context, "Lỗi kết nối: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         }
                                     }
 
-                                    else -> {
-                                        // COD / Chuyển khoản
+                                    PaymentMethod.COD -> {
                                         placeOrderNormally(
                                             context = this@OrderScreen,
                                             selectedItems = selectedItems,
                                             selectedAddress = selectedAddress,
                                             currentUser = currentUser,
-                                            selectedMethod = selectedMethod,
+                                            selectedMethod = PaymentMethod.COD.label,
                                             setPlacing = { isPlacing = it },
                                             onSuccess = { showSuccessDialog = true },
                                             onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
                                         )
                                     }
+
+                                    null -> TODO()
                                 }
+
                             },
                             onBack = { finish() }
                         )
@@ -229,8 +274,6 @@ class OrderScreen : ComponentActivity() {
         }
     }
 }
-
-
     private fun placeOrderNormally(
         context: Context,
         selectedItems: List<CartItem>,
@@ -305,8 +348,8 @@ fun OrderContent(
     selectedAddress: Address?,
     onAddressSelect: (Address) -> Unit,
     addresses: List<Address>,
-    selectedMethod: String,
-    onMethodChange: (String) -> Unit,
+    selectedMethod: PaymentMethod?,
+    onMethodChange: (PaymentMethod) -> Unit,
     isPlacing: Boolean,
     onPlaceOrder: () -> Unit,
     onBack: () -> Unit
@@ -388,31 +431,27 @@ fun OrderContent(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Phương thức thanh toán", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
 
-                val paymentMethods = listOf(
-                    "Thanh toán khi nhận hàng",
-                    "Chuyển khoản ngân hàng",
-                    "ZaloPay"
-                )
+                val paymentMethods = listOf(PaymentMethod.COD, PaymentMethod.VNPAY)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    paymentMethods.forEach { label ->
+                    paymentMethods.forEach { method ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .weight(1f)
                                 .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable { onMethodChange(label) }
+                                .clickable { onMethodChange(method) }
                                 .padding(horizontal = 8.dp, vertical = 6.dp)
                         ) {
                             RadioButton(
-                                selected = selectedMethod == label,
-                                onClick = { onMethodChange(label) }
+                                selected = selectedMethod == method,
+                                onClick = { onMethodChange(method) }
                             )
-                            Text(label, modifier = Modifier.padding(start = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(method.label, modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                 }

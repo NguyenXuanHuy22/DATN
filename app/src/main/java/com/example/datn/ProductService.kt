@@ -15,6 +15,7 @@ import retrofit2.http.PartMap
 import retrofit2.http.Path
 
 interface ProductService {
+
     // ===== Product =====
     @GET("api/products")
     suspend fun getListProducts(): Response<List<ProductData>>
@@ -32,29 +33,12 @@ interface ProductService {
     @POST("api/users/register")
     suspend fun registerUser(@Body user: User): Response<RegisterResponse>
 
-    // 👉 Đổi mật khẩu
     @POST("api/users/{id}/change-password")
     suspend fun changePassword(
         @Path("id") id: String,
         @Body request: ChangePasswordRequest
     ): Response<ChangePasswordResponse>
 
-    // Update User bình thường (JSON)
-    @PUT("api/users/{id}")
-    suspend fun updateUser(
-        @Path("id") id: String,
-        @Body user: User
-    ): Response<Unit>
-
-    @Multipart
-    @PUT("api/users/{id}")
-    suspend fun updateUserMultipart(
-        @Path("id") id: String,
-        @Part avatar: MultipartBody.Part?, // có thể null
-        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>
-    ): Response<User>
-
-    // Update JSON (không ảnh)
     @PUT("api/users/{id}")
     suspend fun updateUserJson(
         @Path("id") id: String,
@@ -62,33 +46,27 @@ interface ProductService {
     ): Response<User>
 
     // ===== Order =====
-    @GET("api/orders")
-    suspend fun getOrders(): Response<List<Order>>
-
     @POST("api/orders")
     suspend fun createOrder(@Body order: Order): Response<Order>
 
-    @PUT("api/orders/{id}")
-    suspend fun updateOrder(@Path("id") id: String, @Body order: Order): Response<Order>
-
-    //  Sửa đúng path có "api/"
     @GET("api/orders/user/{userId}")
     suspend fun getOrdersByUser(@Path("userId") userId: String): Response<List<Order>>
 
-    // Lấy chi tiết 1 đơn hàng theo id
     @GET("api/orders/{id}/detail")
     suspend fun getOrderDetail(@Path("id") orderId: String): Response<Order>
 
     @PATCH("api/orders/{id}/cancel")
     suspend fun cancelOrder(@Path("id") orderId: String): Response<CancelOrderResponse>
 
-
+    // 🔑 VNPay
+    @POST("api/orders/create_payment_url")
+    suspend fun createVnpayPayment(
+        @Body body: VnpCreatePaymentRequest
+    ): Response<PaymentUrlResponse>
 
     // ===== Cart =====
     @DELETE("api/cart-items/{itemId}")
-    suspend fun deleteCartItemById(
-        @Path("itemId") itemId: String
-    ): Response<Unit>
+    suspend fun deleteCartItemById(@Path("itemId") itemId: String): Response<Unit>
 
     // ===== Wishlist =====
     @GET("api/wishlists/user/{userId}")
@@ -97,17 +75,8 @@ interface ProductService {
     @POST("api/wishlists/toggle")
     suspend fun toggleWishlist(@Body request: ToggleWishlistRequest): Response<Wishlist>
 
-    @DELETE("api/wishlists/{userId}/items/{productId}")
-    suspend fun removeWishlistItem(
-        @Path("userId") userId: String,
-        @Path("productId") productId: String
-    ): Response<Unit>
-
-    // ===== banner =====
-
+    // ===== Banner =====
     @GET("api/banners")
     suspend fun getBanners(): List<Banner>
-
-
-
 }
+

@@ -15,6 +15,7 @@
         android:theme="@style/Theme.DATN"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+
         <activity
             android:name=".ReviewListScreen"
             android:exported="false"
@@ -110,6 +111,13 @@
             android:exported="false"
             android:label="@string/title_activity_home"
             android:theme="@style/Theme.DATN" />
+
+        <!-- 🔹 Khai báo thêm VNPayWebViewActivity -->
+        <activity
+            android:name=".VNPayWebViewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DATN" />
+
         <activity
             android:name=".SplashScreen"
             android:exported="true"
@@ -117,7 +125,6 @@
             android:theme="@style/Theme.DATN">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
