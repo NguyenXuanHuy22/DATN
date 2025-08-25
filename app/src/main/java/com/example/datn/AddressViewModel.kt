@@ -54,5 +54,61 @@ class AddressViewModel : ViewModel() {
             }
         }
     }
+
+    fun addAddress(address: Address, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val res = RetrofitClient.addressService.addAddress(address)
+                if (res.isSuccessful) {
+                    // Reload list for this user
+                    loadAddresses(address.userId)
+                    onDone?.let { it() }
+                } else {
+                    errorMessage.value = "Thêm địa chỉ thất bại: ${res.code()}"
+                }
+            } catch (e: Exception) {
+                errorMessage.value = "Lỗi: ${e.message}"
+            }
+        }
+    }
+
+    fun updateAddress(id: String, address: Address, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val res = RetrofitClient.addressService.updateAddress(id, address)
+                if (res.isSuccessful) {
+                    loadAddresses(address.userId)
+                    onDone?.invoke()
+                } else {
+                    errorMessage.value = "Cập nhật thất bại: ${res.code()}"
+                }
+            } catch (e: Exception) {
+                errorMessage.value = "Lỗi: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteAddress(id: String, userId: String, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val res = RetrofitClient.addressService.deleteAddress(id)
+                if (res.isSuccessful) {
+                    loadAddresses(userId)
+                    onDone?.invoke()
+                } else {
+                    errorMessage.value = "Xóa thất bại: ${res.code()}"
+                }
+            } catch (e: Exception) {
+                errorMessage.value = "Lỗi: ${e.message}"
+            }
+        }
+    }
+
+    fun setDefaultAddress(target: Address, onDone: (() -> Unit)? = null) {
+        // Backend ideally ensures one default; here we send update with isDefault=true
+        updateAddress(target._id, target.copy(isDefault = true)) {
+            onDone?.invoke()
+        }
+    }
 }
 

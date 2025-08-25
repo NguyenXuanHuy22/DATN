@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ class EditProfile : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
@@ -70,8 +72,19 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
     var password by remember { mutableStateOf(TextFieldValue("")) }
     var phone by remember { mutableStateOf(TextFieldValue("")) }
     var address by remember { mutableStateOf(TextFieldValue("")) }
+    // Province/District/Ward selections
+    var provinces by remember { mutableStateOf<List<Province>>(emptyList()) }
+    var districts by remember { mutableStateOf<List<District>>(emptyList()) }
+    var wards by remember { mutableStateOf<List<Ward>>(emptyList()) }
+    var selectedProvince by remember { mutableStateOf<Province?>(null) }
+    var selectedDistrict by remember { mutableStateOf<District?>(null) }
+    var selectedWard by remember { mutableStateOf<Ward?>(null) }
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     var avatarBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Address management state
+    val addressViewModel = remember { AddressViewModel() }
+    var showAddressSheet by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -101,6 +114,24 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
             }
         } catch (e: Exception) {
             Log.e("EditProfile", "Lỗi load user", e)
+        }
+    }
+
+    // Load provinces list (depth=1)
+    LaunchedEffect(true) {
+        try {
+            val res = RetrofitClient.provincesApi.getProvinces(1)
+            if (res.isSuccessful) {
+                provinces = res.body() ?: emptyList()
+            }
+        } catch (_: Exception) { }
+        addressViewModel.loadAddresses(userId)
+    }
+
+    // Refresh addresses when opening the manager
+    LaunchedEffect(showAddressSheet) {
+        if (showAddressSheet) {
+            addressViewModel.loadAddresses(userId)
         }
     }
 
@@ -168,7 +199,29 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         OutlinedTextField(name, { name = it }, label = { Text("Tên") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = it }, label = { Text("SĐT") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(address, { address = it }, label = { Text("Địa chỉ") }, modifier = Modifier.fillMaxWidth())
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Quản lý địa chỉ giao hàng")
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth().clickable { showAddressSheet = true }
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = user?.name ?: "")
+                val addrPreview = user?.address ?: address.text
+                if (addrPreview.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(text = addrPreview, color = Color.Gray)
+                } else {
+                    Text(text = "Chạm để chọn/thêm địa chỉ", color = Color.Gray)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = { showAddressSheet = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("Thêm địa chỉ")
+        }
+        // Bỏ nhập địa chỉ chi tiết tại đây; chỉ thêm/sửa trong bottom sheet
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -196,7 +249,20 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
                         )
 
                         // Gọi API update
-                        val res = RetrofitClient.apiService.updateUserJson(userId, updateData)
+                        val composedAddress = buildString {
+                            selectedWard?.let { append(it.name).append(", ") }
+                            selectedDistrict?.let { append(it.name).append(", ") }
+                            selectedProvince?.let { append(it.name) }
+                            if (address.text.isNotBlank()) {
+                                if (isNotEmpty()) append(", ")
+                                append(address.text)
+                            }
+                        }
+
+                        val res = RetrofitClient.apiService.updateUserJson(
+                            userId,
+                            updateData.copy(address = if (composedAddress.isNotBlank()) composedAddress else address.text)
+                        )
 
                         if (res.isSuccessful) {
                             Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
@@ -230,6 +296,22 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
             Text("Lưu thay đổi")
         }
 
+    }
+
+    if (showAddressSheet) {
+        AddressManagerSheet(
+            userId = userId,
+            addressViewModel = addressViewModel,
+            provinces = provinces,
+            onDismiss = { showAddressSheet = false },
+            onAddressChosen = { chosen ->
+                address = TextFieldValue(chosen.address)
+                user = user?.copy(address = chosen.address)
+                showAddressSheet = false
+            },
+            userName = user?.name ?: name.text,
+            userPhone = user?.phone ?: phone.text
+        )
     }
 }
 
