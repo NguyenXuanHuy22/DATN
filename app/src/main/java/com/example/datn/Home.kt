@@ -76,8 +76,7 @@ fun HomeScreen(
     var priceSort by remember { mutableStateOf("none") }
     var showFilter by remember { mutableStateOf(false) }
 
-    // ❌ Bị sai: remember trong LazyColumn
-    // ✅ Đưa selectedCategory ra ngoài
+    //  Đưa selectedCategory ra ngoài
     var selectedCategory by remember { mutableStateOf<String?>("Tất cả") }
 
     LaunchedEffect(Unit) {

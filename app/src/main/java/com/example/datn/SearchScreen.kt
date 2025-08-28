@@ -41,7 +41,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
         viewModel.getListProducts() //  THÊM DÒNG NÀY
     }
     val suggestions = listOf(
-        "Áo đá bóng", "Áo cầu lông", "Quần áo bóng đá", "Áo bóng rổ"
+        "Áo bóng đá", "Áo cầu lông", "Quần áo bóng đá", "Áo bóng rổ"
     )
 
     val filteredProducts = allProducts.filter {

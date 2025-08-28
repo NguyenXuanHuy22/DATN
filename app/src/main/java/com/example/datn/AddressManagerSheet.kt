@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
@@ -76,35 +77,55 @@ fun AddressManagerSheet(
                             .padding(bottom = 8.dp)
                     ) {
                         Column(Modifier.padding(12.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                RadioButton(selected = addr._id == selectedId, onClick = {
-                                    selectedId = addr._id
-                                    addressViewModel.setDefaultAddress(addr) {
-                                        onAddressChosen(addr.copy(isDefault = true))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = addr._id == selectedId,
+                                    onClick = {
+                                        // Cập nhật state ngay lập tức để UI đổi tick
+                                        selectedId = addr._id
+
+                                        // Gọi API để set mặc định
+                                        addressViewModel.setDefaultAddress(addr) {
+                                            // Sau khi server cập nhật xong, refresh danh sách
+                                            addressViewModel.loadAddresses(userId)
+                                            onAddressChosen(addr.copy(isDefault = true))
+                                        }
                                     }
-                                })
+                                )
                                 Spacer(Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f).clickable {
-                                    selectedId = addr._id
-                                    // When a user taps the card, also set it as default so it persists next time
-                                    addressViewModel.setDefaultAddress(addr) {
-                                        onAddressChosen(addr.copy(isDefault = true))
-                                    }
-                                }) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            selectedId = addr._id
+                                            addressViewModel.setDefaultAddress(addr) {
+                                                addressViewModel.loadAddresses(userId)
+                                                onAddressChosen(addr.copy(isDefault = true))
+                                            }
+                                        }
+
+                                ) {
                                     Text(addr.name, style = MaterialTheme.typography.bodyLarge)
                                     Spacer(Modifier.height(4.dp))
-                                    Text(addr.address, color = Color.Gray)
+                                    Text(
+                                        addr.address,
+                                        color = Color.Gray,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
-                                if (addr.isDefault) {
-                                    AssistChip(onClick = {}, enabled = false, label = { Text("Mặc định") })
-                                } else {
-                                    TextButton(onClick = {
-                                        addressViewModel.setDefaultAddress(addr) {
-                                            onAddressChosen(addr.copy(isDefault = true))
-                                            selectedId = addr._id
-                                        }
-                                    }) { Text("Đặt mặc định") }
-                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+
                                 Spacer(Modifier.width(8.dp))
                                 TextButton(onClick = { editing = addr }) { Text("Sửa") }
                                 Spacer(Modifier.width(4.dp))
@@ -114,6 +135,7 @@ fun AddressManagerSheet(
                     }
                 }
             }
+
 
             if (deleteConfirm != null) {
                 val target = deleteConfirm!!
@@ -336,24 +358,31 @@ private fun AddressEditForm(
         OutlinedTextField(value = detail, onValueChange = { detail = it }, label = { Text("Địa chỉ chi tiết") }, modifier = Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Hủy") }
-            Button(onClick = {
-                val full = buildString {
-                    selectedWard?.let { append(it.name).append(", ") }
-                    selectedDistrict?.let { append(it.name).append(", ") }
-                    selectedProvince?.let { append(it.name) }
-                    if (detail.isNotBlank()) { if (isNotEmpty()) append(", "); append(detail) }
-                }
-                onSave(
-                    original.copy(
-                        name = name,
-                        phone = phone,
-                        address = if (full.isNotBlank()) full else original.address
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            TextButton(onClick = onCancel) { Text("Hủy") }
+            Button(
+                onClick = {
+                    val full = buildString {
+                        selectedWard?.let { append(it.name).append(", ") }
+                        selectedDistrict?.let { append(it.name).append(", ") }
+                        selectedProvince?.let { append(it.name) }
+                        if (detail.isNotBlank()) { if (isNotEmpty()) append(", "); append(detail) }
+                    }
+                    onSave(
+                        original.copy(
+                            name = name,
+                            phone = phone,
+                            address = if (full.isNotBlank()) full else original.address
+                        )
                     )
-                )
-            }) { Text("Lưu") }
+                }
+            ) { Text("Lưu") }
         }
+
     }
 }
 

@@ -212,7 +212,7 @@ fun RegisterScreenContent() {
                                                     .putString("userId", userId)
                                                     .apply()
                                                 Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
-                                                context.startActivity(Intent(context, Home::class.java))
+                                                context.startActivity(Intent(context, LoginScreen::class.java))
                                                 (context as? Activity)?.finish()
                                             } else {
                                                 Toast.makeText(context, "Lỗi: Không có ID người dùng", Toast.LENGTH_LONG).show()

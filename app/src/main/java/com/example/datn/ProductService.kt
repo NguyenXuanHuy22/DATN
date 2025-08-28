@@ -58,12 +58,6 @@ interface ProductService {
     @PATCH("api/orders/{id}/cancel")
     suspend fun cancelOrder(@Path("id") orderId: String): Response<CancelOrderResponse>
 
-    // 🔑 VNPay
-    @POST("api/orders/create_payment_url")
-    suspend fun createVnpayPayment(
-        @Body body: VnpCreatePaymentRequest
-    ): Response<PaymentUrlResponse>
-
     // ===== Cart =====
     @DELETE("api/cart-items/{itemId}")
     suspend fun deleteCartItemById(@Path("itemId") itemId: String): Response<Unit>

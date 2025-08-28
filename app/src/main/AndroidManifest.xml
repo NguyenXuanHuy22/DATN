@@ -48,9 +48,21 @@
             android:theme="@style/Theme.DATN" />
         <activity
             android:name=".OrderScreen"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_order_screen"
-            android:theme="@style/Theme.DATN" />
+            android:theme="@style/Theme.DATN"
+            android:launchMode="singleTop">
+
+            <!-- Deep link để ZaloPay redirect về app -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="myapp" android:host="payment" />
+            </intent-filter>
+
+        </activity>
+
         <activity
             android:name=".BannerManager"
             android:exported="false"
@@ -114,9 +126,11 @@
 
         <!-- 🔹 Khai báo thêm VNPayWebViewActivity -->
         <activity
-            android:name=".VNPayWebViewActivity"
+            android:name=".ZaloPayWebViewActivity"
             android:exported="false"
             android:theme="@style/Theme.DATN" />
+
+
 
         <activity
             android:name=".SplashScreen"

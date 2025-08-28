@@ -72,7 +72,6 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
     var password by remember { mutableStateOf(TextFieldValue("")) }
     var phone by remember { mutableStateOf(TextFieldValue("")) }
     var address by remember { mutableStateOf(TextFieldValue("")) }
-    // Province/District/Ward selections
     var provinces by remember { mutableStateOf<List<Province>>(emptyList()) }
     var districts by remember { mutableStateOf<List<District>>(emptyList()) }
     var wards by remember { mutableStateOf<List<Ward>>(emptyList()) }
@@ -82,7 +81,6 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
     var pickedImageUri by remember { mutableStateOf<Uri?>(null) }
     var avatarBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Address management state
     val addressViewModel = remember { AddressViewModel() }
     var showAddressSheet by remember { mutableStateOf(false) }
 
@@ -96,7 +94,7 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         }
     }
 
-    // Load user từ API
+    // --- Load user ---
     LaunchedEffect(Unit) {
         try {
             val response = RetrofitClient.apiService.getUserById(userId)
@@ -117,185 +115,166 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         }
     }
 
-    // Load provinces list (depth=1)
+    // --- Load provinces ---
     LaunchedEffect(true) {
         try {
             val res = RetrofitClient.provincesApi.getProvinces(1)
-            if (res.isSuccessful) {
-                provinces = res.body() ?: emptyList()
-            }
-        } catch (_: Exception) { }
+            if (res.isSuccessful) provinces = res.body() ?: emptyList()
+        } catch (_: Exception) {}
         addressViewModel.loadAddresses(userId)
     }
 
-    // Refresh addresses when opening the manager
     LaunchedEffect(showAddressSheet) {
-        if (showAddressSheet) {
-            addressViewModel.loadAddresses(userId)
-        }
+        if (showAddressSheet) addressViewModel.loadAddresses(userId)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Row trên cùng: Back + Title
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable {
+    // --- UI ---
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Chỉnh sửa thông tin") },
+                navigationIcon = {
+                    IconButton(onClick = {
                         (context as? Activity)?.finish()
+                        onBack()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                    .padding(8.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "Chỉnh sửa thông tin",
-                style = MaterialTheme.typography.titleMedium
+                }
             )
         }
-
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Avatar
-        Box(
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .size(100.dp)
-                .align(Alignment.CenterHorizontally)
-                .clip(CircleShape)
-                .clickable { imagePicker.launch("image/*") }
+                .padding(paddingValues)
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            avatarBitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "Avatar",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } ?: Box(
+            // Avatar
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Gray)
-            )
-        }
+                    .size(100.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .clip(CircleShape)
+                    .clickable { imagePicker.launch("image/*") }
+            ) {
+                avatarBitmap?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "Avatar",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } ?: Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Gray)
+                )
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(onClick = { imagePicker.launch("image/*") }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("Đổi ảnh")
-        }
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = { imagePicker.launch("image/*") },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Đổi ảnh")
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        OutlinedTextField(name, { name = it }, label = { Text("Tên") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(phone, { phone = it }, label = { Text("SĐT") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(name, { name = it }, label = { Text("Tên") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(phone, { phone = it }, label = { Text("SĐT") }, modifier = Modifier.fillMaxWidth())
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "Quản lý địa chỉ giao hàng")
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable { showAddressSheet = true }
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = user?.name ?: "")
-                val addrPreview = user?.address ?: address.text
-                if (addrPreview.isNotBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(text = addrPreview, color = Color.Gray)
-                } else {
-                    Text(text = "Chạm để chọn/thêm địa chỉ", color = Color.Gray)
+            Spacer(Modifier.height(12.dp))
+            Text("Quản lý địa chỉ giao hàng")
+            Spacer(Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { showAddressSheet = true }
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(user?.name ?: "")
+                    val addrPreview = user?.address ?: address.text
+                    if (addrPreview.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(addrPreview, color = Color.Gray)
+                    } else {
+                        Text("Chạm để chọn/thêm địa chỉ", color = Color.Gray)
+                    }
                 }
             }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = { showAddressSheet = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Thêm địa chỉ")
-        }
-        // Bỏ nhập địa chỉ chi tiết tại đây; chỉ thêm/sửa trong bottom sheet
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { showAddressSheet = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Thêm địa chỉ")
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                scope.launch {
-                    try {
-                        // Chuyển ảnh mới sang Base64 nếu có
-                        val avatarBase64 = pickedImageUri?.let { uri ->
-                            val inputStream = context.contentResolver.openInputStream(uri)
-                            val bitmap = BitmapFactory.decodeStream(inputStream)
-                            val outputStream = ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                            val bytes = outputStream.toByteArray()
-                            Base64.encodeToString(bytes, Base64.DEFAULT)
-                        }
-
-                        // Dữ liệu cập nhật
-                        val updateData = UpdateUserRequest(
-                            name = name.text,
-                            email = email.text,
-                            phone = phone.text,
-                            address = address.text,
-                            avatar = avatarBase64 ?: user?.avatar
-                        )
-
-                        // Gọi API update
-                        val composedAddress = buildString {
-                            selectedWard?.let { append(it.name).append(", ") }
-                            selectedDistrict?.let { append(it.name).append(", ") }
-                            selectedProvince?.let { append(it.name) }
-                            if (address.text.isNotBlank()) {
-                                if (isNotEmpty()) append(", ")
-                                append(address.text)
-                            }
-                        }
-
-                        val res = RetrofitClient.apiService.updateUserJson(
-                            userId,
-                            updateData.copy(address = if (composedAddress.isNotBlank()) composedAddress else address.text)
-                        )
-
-                        if (res.isSuccessful) {
-                            Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
-                            user = res.body()
-                            pickedImageUri = null
-
-                            // Cập nhật avatarBitmap mới từ server
-                            res.body()?.avatar?.let { base64 ->
-                                val cleanBase64 = base64.substringAfter("base64,", base64)
-                                val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
-                                avatarBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            Button(
+                onClick = {
+                    scope.launch {
+                        try {
+                            val avatarBase64 = pickedImageUri?.let { uri ->
+                                val inputStream = context.contentResolver.openInputStream(uri)
+                                val bitmap = BitmapFactory.decodeStream(inputStream)
+                                val outputStream = ByteArrayOutputStream()
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                val bytes = outputStream.toByteArray()
+                                Base64.encodeToString(bytes, Base64.DEFAULT)
                             }
 
-                            // --- Thêm vào đây ---
-                            val activity = context as Activity
-                            activity.setResult(Activity.RESULT_OK)
-                            activity.finish()
+                            val composedAddress = buildString {
+                                selectedWard?.let { append(it.name).append(", ") }
+                                selectedDistrict?.let { append(it.name).append(", ") }
+                                selectedProvince?.let { append(it.name) }
+                                if (address.text.isNotBlank()) {
+                                    if (isNotEmpty()) append(", ")
+                                    append(address.text)
+                                }
+                            }
 
-                        } else {
-                            Toast.makeText(context, "Cập nhật thất bại", Toast.LENGTH_SHORT).show()
+                            val res = RetrofitClient.apiService.updateUserJson(
+                                userId,
+                                UpdateUserRequest(
+                                    name = name.text,
+                                    email = email.text,
+                                    phone = phone.text,
+                                    address = if (composedAddress.isNotBlank()) composedAddress else address.text,
+                                    avatar = avatarBase64 ?: user?.avatar
+                                )
+                            )
+
+                            if (res.isSuccessful) {
+                                Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
+                                user = res.body()
+                                pickedImageUri = null
+
+                                res.body()?.avatar?.let { base64 ->
+                                    val cleanBase64 = base64.substringAfter("base64,", base64)
+                                    val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                                    avatarBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                }
+
+                                (context as Activity).setResult(Activity.RESULT_OK)
+                                (context as Activity).finish()
+                            } else {
+                                Toast.makeText(context, "Cập nhật thất bại", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Log.e("EditProfile", "Lỗi cập nhật", e)
+                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
-
-                    } catch (e: Exception) {
-                        Log.e("EditProfile", "Lỗi cập nhật", e)
-                        Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Lưu thay đổi")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Lưu thay đổi")
+            }
         }
-
     }
 
     if (showAddressSheet) {
@@ -314,6 +293,7 @@ fun EditProfileScreen(onBack: () -> Unit = {}) {
         )
     }
 }
+
 
 
 
