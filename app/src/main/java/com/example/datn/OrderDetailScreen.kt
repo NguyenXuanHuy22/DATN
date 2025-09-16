@@ -1,5 +1,6 @@
 package com.example.datn
 
+import com.example.datn.ui.theme.DATNTheme
 import android.content.Intent
 import android.os.Bundle
 import android.util.Base64
@@ -44,10 +45,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.datn.ui.theme.DATNTheme
-import com.example.datn.utils.toDecimalString
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.datn.utils.toDecimalString
 
 class OrderDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +60,7 @@ class OrderDetailActivity : ComponentActivity() {
             return
         }
 
-        // SharedPreferences lấy thông tin user
+        // 🔹 Lấy thông tin user từ SharedPreferences
         val prefs = getSharedPreferences("auth", MODE_PRIVATE)
         val userId = prefs.getString("userId", "") ?: ""
         val username = prefs.getString("username", "Người dùng") ?: "Người dùng"
@@ -71,7 +71,6 @@ class OrderDetailActivity : ComponentActivity() {
             OrderDetailViewModelFactory(orderId)
         )[OrderDetailViewModel::class.java]
 
-        // RegisterForActivityResult để chờ ReviewActivity trả kết quả
         val reviewLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
@@ -82,17 +81,37 @@ class OrderDetailActivity : ComponentActivity() {
 
         setContent {
             DATNTheme {
+                val uiState = viewModel.uiState
+
                 OrderDetailScreen(
-                    uiState = viewModel.uiState,
-                    onCancelConfirmed = { viewModel.cancelOrder() },
+                    uiState = uiState,
+                    onCancelConfirmed = { note -> viewModel.cancelOrder(note) },
                     onBack = { finish() },
-                    onReviewed = { productId ->
+                    onReviewed = {
+                        val order = uiState.order ?: return@OrderDetailScreen
+
+                        // ✅ Lấy userId ưu tiên từ SharedPreferences
+                        val safeUserId = if (userId.isNotBlank()) userId else order.userId
+
+                        // ✅ Đảm bảo orderId không rỗng trước khi mở màn hình đánh giá
+                        val safeOrderId = order.orderId.ifBlank {
+                            Log.e("OrderDetail", "❌ orderId trống, không thể mở ReviewActivity!")
+                            Toast.makeText(
+                                this,
+                                "Không thể mở đánh giá: orderId trống",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@OrderDetailScreen
+                        }
+
+                        Log.d("OrderDetail", "DEBUG mở ReviewActivity với orderId=$safeOrderId, userId=$safeUserId")
+
                         val intent = Intent(this, ReviewActivity::class.java).apply {
-                            putExtra("productId", productId)
-                            putExtra("orderId", orderId)
-                            putExtra("userId", userId)
+                            putExtra("orderId", safeOrderId) // ✅ luôn là ObjectId thật
+                            putExtra("userId", safeUserId)
                             putExtra("username", username)
                             putExtra("avatar", avatar)
+                            putExtra("productList", ArrayList(order.items))
                         }
                         reviewLauncher.launch(intent)
                     }
@@ -106,11 +125,12 @@ class OrderDetailActivity : ComponentActivity() {
 @Composable
 fun OrderDetailScreen(
     uiState: OrderDetailUiState,
-    onCancelConfirmed: () -> Unit,
+    onCancelConfirmed: (String) -> Unit,
     onBack: () -> Unit,
-    onReviewed: (String) -> Unit
+    onReviewed: () -> Unit
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -124,163 +144,234 @@ fun OrderDetailScreen(
             )
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
             when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                uiState.isLoading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
 
-                uiState.errorMessage != null -> Text(
-                    "Lỗi: ${uiState.errorMessage}",
-                    color = Color.Red,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                uiState.errorMessage != null -> {
+                    Text(
+                        "Lỗi: ${uiState.errorMessage}",
+                        color = Color.Red,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
 
                 uiState.order != null -> {
                     val order = uiState.order
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        // Trạng thái
-                        Text(
-                            "Trạng thái: ${order.status ?: "Không xác định"}",
-                            color = when (order.status) {
-                                "Đã huỷ" -> Color.Red
-                                "Đã giao" -> Color.Green
-                                else -> Color.Black
-                            },
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        OrderStatusProgressBar(order.status ?: "")
 
-                        // Thông tin khách hàng
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text(text = order.customerName ?: "Không có tên", fontWeight = FontWeight.Bold)
-                                Text(text = order.customerPhone ?: "Không có số điện thoại")
-                                Text(text = order.customerAddress ?: "Không có địa chỉ")
+                    // Trạng thái
+                    Text(
+                        "Trạng thái: ${order.status ?: "Không xác định"}",
+                        color = when (order.status) {
+                            "Đã huỷ" -> Color.Red
+                            "Đã giao" -> Color.Green
+                            else -> Color.Black
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                    OrderStatusProgressBar(order.status ?: "")
+
+                    // Thông tin khách hàng
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text(order.customerName ?: "Không có tên", fontWeight = FontWeight.Bold)
+                            Text(order.customerPhone ?: "Không có số điện thoại")
+                            Text(order.customerAddress ?: "Không có địa chỉ")
+                        }
+                    }
+
+                    // Danh sách sản phẩm
+                    if (order.items.isEmpty()) {
+                        Text(
+                            "Không có sản phẩm",
+                            modifier = Modifier.padding(8.dp),
+                            color = Color.Gray
+                        )
+                    } else {
+                        order.items.forEach { item ->
+                            OrderItemRow(item)
+                        }
+                    }
+
+                    // Tổng tiền & thanh toán
+                    Text(
+                        "Thành tiền: ${order.total.toDecimalString()} vnđ",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                    Text(
+                        "Phương thức thanh toán: ${order.paymentMethod.ifBlank { "Không rõ" }}",
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    // Ngày đặt hàng
+                    Text(
+                        "Ngày đặt hàng: ${formatOrderDateTime(order.date)}",
+                        modifier = Modifier.padding(8.dp)
+                    )
+
+                    // Ghi chú đơn hàng
+                    if (order.notes.isNotEmpty()) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("Ghi chú đơn hàng:", fontWeight = FontWeight.SemiBold)
+                            order.notes.forEach { note ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFFF5F5F5)
+                                    )
+                                ) {
+                                    Text(
+                                        text = note.message,
+                                        modifier = Modifier.padding(8.dp),
+                                        fontStyle = if (note.type == "system") FontStyle.Italic else FontStyle.Normal,
+                                        color = when (note.type) {
+                                            "user" -> Color.Black
+                                            "system" -> Color.Gray
+                                            else -> Color.DarkGray
+                                        }
+                                    )
+                                }
                             }
                         }
+                    }
 
-                        // Danh sách sản phẩm
-                        if (order.items.isNullOrEmpty()) {
-                            Text(
-                                "Không có sản phẩm",
-                                modifier = Modifier.padding(8.dp),
-                                color = Color.Gray
-                            )
+                    // 👉 Nút đánh giá đơn hàng
+                    if (order.status == "Đã giao") {
+                        if (!order.isReviewed) {
+                            Button(
+                                onClick = { onReviewed() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text("Đánh giá đơn hàng")
+                            }
                         } else {
-                            order.items.forEach { item ->
-                                OrderItemRow(item)
+                            Text(
+                                "Bạn đã đánh giá đơn hàng này",
+                                color = Color.Gray,
+                                fontStyle = FontStyle.Italic,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    // 👉 Nút hành động theo trạng thái
+                    when (order.status) {
+                        "Chờ xác nhận" -> {
+                            Button(
+                                onClick = { showCancelDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                            ) {
+                                Text("Huỷ đơn", color = Color.White)
                             }
                         }
 
-                        // Tổng tiền & thanh toán
-                        Text(
-                            "Thành tiền: ${order.total?.toDecimalString() ?: "0"} đ",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                        Text(
-                            "Phương thức thanh toán: ${order.paymentMethod ?: "Không rõ"}",
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-
-                        // Ngày đặt hàng (hiển thị giờ phút giây)
-                        Text(
-                            "Ngày đặt hàng: ${formatOrderDateTime(order.date)}",
-                            modifier = Modifier.padding(8.dp)
-                        )
-
-                        // Nút đánh giá đơn hàng
-                        // Nút đánh giá đơn hàng
-                        if (order.status == "Đã giao") {
-                            if (order.isReviewed != true) {
-                                Button(
-                                    onClick = {
-                                        val firstProductId = order.items.firstOrNull()?.productId ?: ""
-                                        onReviewed(firstProductId)
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                ) {
-                                    Text("Đánh giá đơn hàng")
-                                }
-                            } else {
-                                Text(
-                                    "Bạn đã đánh giá đơn hàng này",
-                                    color = Color.Gray,
-                                    fontStyle = FontStyle.Italic,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Nút hành động theo trạng thái
-                        when (order.status) {
-                            "Chờ xác nhận" -> {
-                                Button(
-                                    onClick = { showCancelDialog = true },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                                ) {
-                                    Text("Huỷ đơn", color = Color.White)
-                                }
-                            }
-
-                            "Đã huỷ" -> {
+                        "Đã huỷ" -> {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Text(
                                     "Đơn hàng đã huỷ",
                                     color = Color.Red,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
                                     textAlign = TextAlign.Center
                                 )
+                                if (!order.cancelNote.isNullOrBlank()) {
+                                    Text(
+                                        "Lý do huỷ: ${order.cancelNote}",
+                                        color = Color.Gray,
+                                        fontStyle = FontStyle.Italic,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+        }
 
-            // AlertDialog xác nhận huỷ
-            if (showCancelDialog) {
-                AlertDialog(
-                    onDismissRequest = { showCancelDialog = false },
-                    title = { Text("Xác nhận") },
-                    text = { Text("Bạn có chắc chắn muốn huỷ đơn hàng này không?") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showCancelDialog = false
-                                onCancelConfirmed()
-                            }
-                        ) {
-                            Text("Huỷ đơn")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showCancelDialog = false }) {
-                            Text("Hủy")
+        // 👉 AlertDialog xác nhận huỷ
+        if (showCancelDialog) {
+            var cancelNote by remember { mutableStateOf("") }
+
+            AlertDialog(
+                onDismissRequest = { showCancelDialog = false },
+                title = { Text("Lý do huỷ đơn") },
+                text = {
+                    Column {
+                        Text("Vui lòng nhập lý do huỷ đơn hàng:")
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = cancelNote,
+                            onValueChange = { newValue ->
+                                if (newValue.length <= 100) cancelNote = newValue
+                            },
+                            placeholder = { Text("...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "${cancelNote.length}/100 ký tự",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            )
                         }
                     }
-                )
-            }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (cancelNote.isBlank()) {
+                                Toast.makeText(context, "Vui lòng nhập lý do", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showCancelDialog = false
+                                onCancelConfirmed(cancelNote)
+                            }
+                        }
+                    ) {
+                        Text("Xác nhận huỷ", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCancelDialog = false }) {
+                        Text("Đóng")
+                    }
+                }
+            )
         }
     }
 }
@@ -342,7 +433,7 @@ fun OrderItemRow(item: OrderItem) {
             )
             Text("Size: ${item.size ?: "-"}, Màu: ${item.color ?: "-"}")
             Text(
-                "${item.price?.toDecimalString() ?: "0"} vnđ",
+                "${item.price?.toDecimalString() ?: "0"} VND",
                 fontWeight = FontWeight.Bold
             )
         }

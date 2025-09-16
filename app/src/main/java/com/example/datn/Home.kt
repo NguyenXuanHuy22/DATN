@@ -48,6 +48,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 
 
 class Home : ComponentActivity() {
@@ -88,17 +90,18 @@ fun HomeScreen(
         productList.map { it.category }.distinct().take(7)
     }
 
-    // Lọc sản phẩm
+    // Lọc sản phẩm (chỉ lấy sản phẩm còn hàng)
     val filteredProducts = productList
         .filter { product ->
-            (selectedCategories.isEmpty() || selectedCategories.contains(product.category)) &&
+            product.status == "còn hàng" && // 🔥 lọc theo trạng thái
+                    (selectedCategories.isEmpty() || selectedCategories.contains(product.category)) &&
                     (selectedCategory == null || product.category == selectedCategory || selectedCategory == "Tất cả") &&
                     product.name.contains(searchText, ignoreCase = true)
         }
         .let {
             when (priceSort) {
-                "lowToHigh" -> it.sortedBy { p -> p.price }
-                "highToLow" -> it.sortedByDescending { p -> p.price }
+                "lowToHigh" -> it.sortedBy { p -> p.originalPrice }
+                "highToLow" -> it.sortedByDescending { p -> p.originalPrice }
                 else -> it
             }
         }
@@ -440,7 +443,7 @@ fun ProductItem(
     val context = LocalContext.current
 
     val imageRequest = remember(product.image) {
-        product.image?.let { base64String ->
+        product.image.let { base64String ->
             if (base64String.startsWith("data:image")) {
                 val pureBase64 = base64String.substringAfter("base64,")
                 val decodedBytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
@@ -495,16 +498,43 @@ fun ProductItem(
             modifier = Modifier.padding(horizontal = 7.dp),
             color = Color.Black
         )
+        // Giá sản phẩm
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp) // cố định chiều cao cho vùng giá
+                .padding(horizontal = 7.dp)
+        ) {
+            if (product.salePrice > 0) {
+                Column(
+                    modifier = Modifier.align(Alignment.BottomStart) // luôn ở dưới cùng
+                ) {
+                    Text(
+                        text = "${product.originalPrice.toDecimalString()} VND",
+                        color = Color.Gray,
+                        textDecoration = TextDecoration.LineThrough,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = "${product.salePrice.toDecimalString()} VND",
+                        color = Color(0xFFD32F2F),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            } else {
+                Text(
+                    text = "${product.originalPrice.toDecimalString()} VND",
+                    color = Color(0xFFD32F2F),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.align(Alignment.BottomStart)
+                )
+            }
+        }
 
-        Text(
-            text = "${product.price.toDecimalString()} VND",
-            color = Color(0xFFD32F2F),
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 7.dp)
-        )
     }
 }
-
 
 @Composable
 fun BottomNavigationBar(currentScreen: String) {

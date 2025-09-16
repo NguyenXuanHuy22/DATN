@@ -9,5 +9,8 @@ data class ZlpCreatePaymentRequest(
     val customerPhone: String,
     val customerAddress: String,
     @SerializedName("redirect_url")
-    val redirectUrl: String
+    val redirectUrl: String,
+    @SerializedName("orderNote") // 🔥 match với backend
+    val orderNote: String? = null
 )
+

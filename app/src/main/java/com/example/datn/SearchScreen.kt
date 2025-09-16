@@ -155,7 +155,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(product.name, fontWeight = FontWeight.Bold)
-                                    Text("${product.price} vnd", color = Color.Gray)
+                                    Text("${product.originalPrice} vnd", color = Color.Gray)
                                 }
                             }
                         }

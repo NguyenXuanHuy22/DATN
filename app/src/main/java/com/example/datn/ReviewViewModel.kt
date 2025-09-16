@@ -112,5 +112,8 @@ class ReviewViewModel : ViewModel() {
             }
         }
     }
+    //  Hàm này để set lỗi thủ công
+    fun setErrorMessage(message: String) {
+        _errorMessage.value = message
+    }
 }
-

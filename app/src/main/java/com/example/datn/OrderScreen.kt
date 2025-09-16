@@ -52,6 +52,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.window.Dialog
 import java.util.*
 import android.net.Uri
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class PaymentMethod(val label: String) {
     COD("Thanh toán khi nhận hàng"),
@@ -65,25 +66,24 @@ class OrderScreen : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Parse danh sách sản phẩm đã chọn từ Intent
-        val selectedItemsJson = intent.getStringExtra("selectedItemsJson")
-        val selectedItems: List<CartItem> = if (!selectedItemsJson.isNullOrEmpty()) {
-            val type = object : TypeToken<List<CartItem>>() {}.type
-            Gson().fromJson(selectedItemsJson, type)
-        } else {
-            emptyList()
-        }
-
-        // Lấy userId từ SharedPreferences
+        val selectedIds = intent.getStringArrayListExtra("selectedItemIds") ?: arrayListOf()
         val sharedPref = getSharedPreferences("auth", MODE_PRIVATE)
         val userId = sharedPref.getString("userId", null)
 
-        // Check deep link khi Activity được mở
         handleDeepLink(intent)
 
         setContent {
             DATNTheme {
                 if (userId != null) {
+                    val cartViewModel: CartViewModel = viewModel()
+                    val cartItems by cartViewModel.cartItems.collectAsState()
+
+                    LaunchedEffect(userId) {
+                        cartViewModel.loadCart(userId)
+                    }
+
+                    val selectedItems = cartItems.filter { it.uniqueId() in selectedIds }
+
                     OrderScreenContent(
                         userId = userId,
                         selectedItems = selectedItems,
@@ -96,18 +96,16 @@ class OrderScreen : ComponentActivity() {
         }
     }
 
-    // Bắt sự kiện khi activity đang mở mà deep link redirect lại
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleDeepLink(intent)
     }
 
-    // Xử lý deep link từ ZaloPay redirect
     private fun handleDeepLink(intent: Intent?) {
         intent?.data?.let { uri ->
             if (uri.scheme == "myapp" && uri.host == "payment") {
                 val status = uri.getQueryParameter("status")
-                paymentResult.value = status // "success" hoặc "fail"
+                paymentResult.value = status
             }
         }
     }
@@ -126,7 +124,7 @@ fun OrderScreenContent(
     var isPlacing by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
-    // Load user & default address
+    // load user + address
     LaunchedEffect(userId) {
         try {
             val usersResp = RetrofitClient.apiService.getUsers()
@@ -151,13 +149,13 @@ fun OrderScreenContent(
         }
     }
 
-    // Lắng nghe kết quả từ deep link (ZaloPay)
+    // theo dõi deep link thanh toán
     LaunchedEffect(paymentResult.value) {
         when (paymentResult.value) {
             "success" -> showSuccessDialog = true
             "fail" -> Toast.makeText(context, "Thanh toán thất bại", Toast.LENGTH_SHORT).show()
         }
-        paymentResult.value = null // reset để không lặp lại
+        paymentResult.value = null
     }
 
     user?.let { currentUser ->
@@ -169,7 +167,7 @@ fun OrderScreenContent(
             selectedMethod = selectedMethod,
             onMethodChange = { selectedMethod = it },
             isPlacing = isPlacing,
-            onPlaceOrder = {
+            onPlaceOrder = { noteText ->
                 if (selectedMethod == null) {
                     Toast.makeText(context, "Vui lòng chọn phương thức thanh toán", Toast.LENGTH_SHORT).show()
                     return@OrderContent
@@ -186,9 +184,9 @@ fun OrderScreenContent(
                             user = currentUser,
                             selectedItems = selectedItems,
                             selectedAddress = selectedAddress,
+                            orderNote = noteText,
                             onStart = { isPlacing = true },
                             onFinish = { isPlacing = false },
-                            onSuccess = { /* không dùng ở đây, deep link xử lý */ },
                             onFailure = {
                                 Toast.makeText(context, "Không tạo được thanh toán", Toast.LENGTH_SHORT).show()
                             }
@@ -201,9 +199,16 @@ fun OrderScreenContent(
                             selectedAddress = selectedAddress,
                             currentUser = currentUser,
                             selectedMethod = PaymentMethod.COD.label,
+                            orderNote = noteText,
                             setPlacing = { isPlacing = it },
-                            onSuccess = { showSuccessDialog = true },
-                            onError = { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+                            onSuccess = { orderId ->
+                                // 🔥 lưu orderId vào Intent, Bundle, hoặc ViewModel
+                                Log.d("Order", "Đặt hàng thành công, orderId = $orderId")
+                                showSuccessDialog = true
+                            },
+                            onError = { msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                     null -> {}
@@ -212,7 +217,6 @@ fun OrderScreenContent(
             onBack = { (context as? Activity)?.finish() }
         )
 
-        // ✅ Dialog hiển thị khi thanh toán thành công (COD hoặc ZaloPay)
         if (showSuccessDialog) {
             SuccessDialog(
                 message = "Thanh toán thành công!",
@@ -226,6 +230,282 @@ fun OrderScreenContent(
     }
 }
 
+@Composable
+fun OrderContent(
+    selectedItems: List<CartItem>,
+    selectedAddress: Address?,
+    onAddressSelect: (Address) -> Unit,
+    addresses: List<Address>,
+    selectedMethod: PaymentMethod?,
+    onMethodChange: (PaymentMethod) -> Unit,
+    isPlacing: Boolean,
+    onPlaceOrder: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val totalProductPrice = selectedItems.sumOf { it.price * it.quantity }
+    val grandTotal = totalProductPrice
+    var noteText by remember { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Đặt hàng", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Tổng tiền")
+                    Text("${totalProductPrice} VND")
+                }
+                Divider(Modifier.padding(vertical = 8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Tổng", fontWeight = FontWeight.Bold)
+                    Text("${grandTotal} VND", color = Color(0xFFd32f2f), fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        if (selectedItems.isEmpty()) {
+                            Toast.makeText(context, "Vui lòng chọn sản phẩm", Toast.LENGTH_SHORT).show()
+                        } else onPlaceOrder(noteText)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isPlacing,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                ) {
+                    Text(if (isPlacing) "Đang xử lý..." else "Đặt hàng", color = Color.White)
+                }
+            }
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text("Địa chỉ", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                if (selectedAddress != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null)
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(selectedAddress.name, fontWeight = FontWeight.Bold)
+                            Text(selectedAddress.phone)
+                            Text(selectedAddress.address)
+                        }
+                    }
+                } else {
+                    Text("Vui lòng chọn địa chỉ", color = Color.Gray)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Phương thức thanh toán", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+
+                val paymentMethods = listOf(PaymentMethod.COD, PaymentMethod.ZALOPAY)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    paymentMethods.forEach { method ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onMethodChange(method) }
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedMethod == method,
+                                onClick = { onMethodChange(method) }
+                            )
+                            Text(method.label, modifier = Modifier.padding(start = 4.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                //  Ghi chú cho đơn hàng
+                var noteText by remember { mutableStateOf("") }
+
+                Text(
+                    "Để lại lời nhắn cho đơn hàng",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                )
+
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { newValue ->
+                        if (newValue.length <= 100) { //  giới hạn 100 ký tự
+                            noteText = newValue
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Lời nhắn cho shop (không bắt buộc)") },
+                    maxLines = 3,
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                //  Hiển thị đếm ký tự
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "${noteText.length}/100 ký tự",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.align(Alignment.CenterEnd) // căn phải
+                    )
+                }
+
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            items(selectedItems) { item ->
+                OrderItemRow(item)
+            }
+        }
+    }
+}
+
+// ----- COD -----
+private fun placeOrderNormally(
+    context: Context,
+    selectedItems: List<CartItem>,
+    selectedAddress: Address?,
+    currentUser: User,
+    selectedMethod: String,
+    orderNote: String?,
+    setPlacing: (Boolean) -> Unit,
+    onSuccess: (String) -> Unit, // 🔥 sửa: truyền orderId ra ngoài
+    onError: (String) -> Unit
+) {
+    val orderItems = selectedItems.map { ci ->
+        OrderItem(
+            orderDetailId = UUID.randomUUID().toString(),
+            productId = ci.productId ?: "",
+            name = ci.name ?: "",
+            image = ci.image ?: "",
+            price = ci.price,
+            quantity = ci.quantity,
+            size = ci.size ?: "",
+            color = ci.color ?: "",
+            subtotal = ci.price * ci.quantity
+        )
+    }
+
+    val newOrderRequest = CreateOrderRequest(
+        userId = currentUser._id ?: "",
+        items = orderItems,
+        total = orderItems.sumOf { it.subtotal },
+        paymentMethod = selectedMethod,
+        status = "Chờ xác nhận",
+        date = "",
+        customerName = selectedAddress?.name ?: "",
+        customerPhone = selectedAddress?.phone ?: "",
+        customerAddress = selectedAddress?.address ?: "",
+        orderNote = orderNote
+    )
+
+    setPlacing(true)
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val response = RetrofitClient.apiService.createOrder(newOrderRequest)
+            withContext(Dispatchers.Main) {
+                setPlacing(false)
+                if (response.isSuccessful) {
+                    val createdOrder = response.body()
+                    val orderId = createdOrder?.orderId  // 🔥 lấy orderId từ response
+                    if (orderId != null) {
+                        onSuccess(orderId)
+                    } else {
+                        onError("Không nhận được orderId từ server")
+                    }
+                } else {
+                    onError("Lỗi đặt hàng: ${response.code()}")
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                setPlacing(false)
+                onError("Lỗi kết nối: ${e.message}")
+            }
+        }
+    }
+}
+
+
+// ----- ZaloPay -----
+private fun createZaloPayOrderSafe(
+    context: Context,
+    user: User,
+    selectedItems: List<CartItem>,
+    selectedAddress: Address?,
+    orderNote: String?,
+    onStart: () -> Unit = {},
+    onFinish: () -> Unit = {},
+    onFailure: () -> Unit = {}
+) {
+    val orderItems = selectedItems.map { ci ->
+        OrderItem(
+            orderDetailId = UUID.randomUUID().toString(),
+            productId = ci.productId ?: "",
+            name = ci.name ?: "",
+            image = ci.image ?: "",
+            price = ci.price,
+            quantity = ci.quantity,
+            size = ci.size ?: "",
+            color = ci.color ?: "",
+            subtotal = ci.price * ci.quantity
+        )
+    }
+
+    val request = ZlpCreatePaymentRequest(
+        userId = user._id ?: "",
+        items = orderItems,
+        customerName = selectedAddress?.name ?: "",
+        customerPhone = selectedAddress?.phone ?: "",
+        customerAddress = selectedAddress?.address ?: "",
+        redirectUrl = "myapp://payment?status=success",
+        orderNote = orderNote // 🔥 gửi note lên backend
+    )
+
+    CoroutineScope(Dispatchers.IO).launch {
+        withContext(Dispatchers.Main) { onStart() }
+        try {
+            val resp = RetrofitClient.zaloPayService.createZalopayPayment(request)
+            withContext(Dispatchers.Main) {
+                onFinish()
+                if (resp.isSuccessful) {
+                    val body = resp.body()
+                    val paymentUrl = body?.paymentUrl ?: body?.rawZalo?.orderUrl
+                    if (!paymentUrl.isNullOrEmpty()) {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(paymentUrl))
+                        context.startActivity(intent)
+                    } else onFailure()
+                } else onFailure()
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) { onFinish(); onFailure() }
+        }
+    }
+}
 @Composable
 fun SuccessDialog(
     message: String,
@@ -250,118 +530,6 @@ fun SuccessDialog(
         },
         shape = RoundedCornerShape(12.dp)
     )
-}
-
-
-// ----- ZaloPay -----
-private fun createZaloPayOrderSafe(
-    context: Context,
-    user: User,
-    selectedItems: List<CartItem>,
-    selectedAddress: Address?,
-    onStart: () -> Unit = {},
-    onFinish: () -> Unit = {},
-    onSuccess: () -> Unit = {},
-    onFailure: () -> Unit = {}
-) {
-    val orderItems = selectedItems.map { ci ->
-        OrderItem(
-            orderDetailId = UUID.randomUUID().toString(),
-            productId = ci.productId ?: "",
-            name = ci.name ?: "",
-            image = ci.image ?: "",
-            price = ci.price,
-            quantity = ci.quantity,
-            size = ci.size ?: "",
-            color = ci.color ?: "",
-            subtotal = ci.price * ci.quantity
-        )
-    }
-
-    val request = ZlpCreatePaymentRequest(
-        userId = user._id ?: "",
-        items = orderItems,
-        customerName = selectedAddress?.name ?: "",
-        customerPhone = selectedAddress?.phone ?: "",
-        customerAddress = selectedAddress?.address ?: "",
-        redirectUrl = "myapp://payment?status=success" // khi thanh toán ok
-        // nếu fail, backend Zalo sẽ tự redirect về ...?status=fail
-    )
-
-    CoroutineScope(Dispatchers.IO).launch {
-        withContext(Dispatchers.Main) { onStart() }
-        try {
-            val resp = RetrofitClient.zaloPayService.createZalopayPayment(request)
-            withContext(Dispatchers.Main) {
-                onFinish()
-                if (resp.isSuccessful) {
-                    val body = resp.body()
-                    val paymentUrl = body?.paymentUrl ?: body?.rawZalo?.orderUrl
-                    if (!paymentUrl.isNullOrEmpty()) {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(paymentUrl))
-                        context.startActivity(intent)
-                    } else onFailure()
-                } else onFailure()
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onFinish(); onFailure() }
-        }
-    }
-}
-
-
-
-// ----- COD -----
-private fun placeOrderNormally(
-    context: Context,
-    selectedItems: List<CartItem>,
-    selectedAddress: Address?,
-    currentUser: User,
-    selectedMethod: String,
-    setPlacing: (Boolean) -> Unit,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    val orderItems = selectedItems.map { ci ->
-        OrderItem(
-            orderDetailId = UUID.randomUUID().toString(),
-            productId = ci.productId ?: "",
-            name = ci.name ?: "",
-            image = ci.image ?: "",
-            price = ci.price,
-            quantity = ci.quantity,
-            size = ci.size ?: "",
-            color = ci.color ?: "",
-            subtotal = ci.price * ci.quantity
-        )
-    }
-
-    val newOrder = Order(
-        orderId = "",
-        userId = currentUser._id ?: "",
-        items = orderItems,
-        total = orderItems.sumOf { it.subtotal },
-        paymentMethod = selectedMethod,
-        status = "Chờ xác nhận",
-        date = "",
-        customerName = selectedAddress?.name ?: "",
-        customerPhone = selectedAddress?.phone ?: "",
-        customerAddress = selectedAddress?.address ?: ""
-    )
-
-    setPlacing(true)
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val response = RetrofitClient.apiService.createOrder(newOrder)
-            withContext(Dispatchers.Main) {
-                setPlacing(false)
-                if (response.isSuccessful) onSuccess()
-                else onError("Lỗi đặt hàng: ${response.code()}")
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { setPlacing(false); onError("Lỗi kết nối: ${e.message}") }
-        }
-    }
 }
 
 @Composable
@@ -400,12 +568,12 @@ fun OrderContent(
             ) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Tổng tiền")
-                    Text("${totalProductPrice} VND")
+                    Text("${totalProductPrice.toDecimalString()} VND")
                 }
                 Divider(Modifier.padding(vertical = 8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Tổng", fontWeight = FontWeight.Bold)
-                    Text("${grandTotal} VND", color = Color(0xFFd32f2f), fontWeight = FontWeight.Bold)
+                    Text("${grandTotal.toDecimalString()} VND", color = Color(0xFFd32f2f), fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(

@@ -42,12 +42,15 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         }
     }
 
-    // Huỷ đơn hàng
-    fun cancelOrder() {
+    // Huỷ đơn hàng + ghi note
+    fun cancelOrder(note: String) {
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true)
             try {
-                val response = RetrofitClient.apiService.cancelOrder(orderId)
+                val response = RetrofitClient.apiService.cancelOrder(
+                    orderId = orderId,
+                    request = CancelOrderRequest(note = note)
+                )
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
@@ -69,7 +72,6 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
     }
 
     // Đánh dấu toàn bộ đơn hàng đã được đánh giá (gọi API)
-    // Khi đánh giá xong (ReviewActivity trả về RESULT_OK) thì gọi hàm này
     fun markOrderAsReviewed() {
         viewModelScope.launch {
             try {
@@ -79,7 +81,6 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
                     if (updatedOrder != null) {
                         uiState = uiState.copy(order = updatedOrder)
                     } else {
-                        // fallback: tự cập nhật cờ nếu server không trả order
                         uiState = uiState.copy(
                             order = uiState.order?.copy(isReviewed = true)
                         )
@@ -93,9 +94,7 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         }
     }
 
-
-
-    // Đánh dấu 1 sản phẩm trong đơn hàng đã được đánh giá (gọi API)
+    // Đánh dấu 1 sản phẩm trong đơn hàng đã được đánh giá
     fun markProductAsReviewed(productId: String) {
         viewModelScope.launch {
             try {
@@ -112,7 +111,6 @@ class OrderDetailViewModel(private val orderId: String) : ViewModel() {
         }
     }
 }
-
 
 data class OrderDetailUiState(
     val order: Order? = null,

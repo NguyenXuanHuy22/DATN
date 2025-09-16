@@ -1,5 +1,7 @@
 package com.example.datn
 
+import com.google.gson.annotations.SerializedName
+
 data class Comment(
     val userId: String,
     val productId: String,
@@ -9,3 +11,4 @@ data class Comment(
     val ratingStar: Int,
     val commentDes: String
 )
+

@@ -49,7 +49,6 @@ class CartScreen : ComponentActivity() {
 
         val sharedPref = getSharedPreferences("auth", Context.MODE_PRIVATE)
         val userId = sharedPref.getString("userId", null)
-        val productRepository = ProductRepository() // tạo instance
 
         Log.d("CartScreen", "USER_ID_DEBUG: $userId")
 
@@ -85,7 +84,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         bottomBar = {
             Column {
                 Column(Modifier.padding(16.dp)) {
-
                     Text("Tổng cộng: ${grandTotal.toDecimalString()} VND", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -94,13 +92,9 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                             if (selectedItems.isEmpty()) {
                                 Toast.makeText(context, "Vui lòng chọn sản phẩm để đặt hàng", Toast.LENGTH_SHORT).show()
                             } else {
-                                val gson = Gson()
-                                val selectedCartItems = cartItems.filter { selectedItems.contains(it.itemId) }
-                                val selectedItemsJson = gson.toJson(selectedCartItems)
-
+                                val selectedIds = ArrayList(selectedItems) // bây giờ chứa server itemId
                                 val intent = Intent(context, OrderScreen::class.java).apply {
-                                    putExtra("selectedItemsJson", selectedItemsJson)
-
+                                    putStringArrayListExtra("selectedItemIds", selectedIds)
                                 }
                                 context.startActivity(intent)
                             }
@@ -136,20 +130,20 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     textAlign = TextAlign.Center
                 )
             }
-
             else -> {
                 LazyColumn(modifier = Modifier.padding(padding)) {
                     items(cartItems) { item ->
-                        val id = item.itemId.orEmpty()   // <- ép về String non-null
+                        // DÙNG itemId do server trả về nếu có, nếu không có fallback về uniqueId
+                        val serverItemId = item.itemId ?: item.uniqueId()
 
                         CartItemRow(
                             item = item,
-                            isSelected = selectedItems.contains(id),
-                            onToggleSelect = { viewModel.toggleItemSelection(id) },
-                            onDelete = { viewModel.deleteItem(id) },
+                            isSelected = selectedItems.contains(serverItemId),
+                            onToggleSelect = { viewModel.toggleItemSelection(serverItemId) },
+                            onDelete = { viewModel.deleteItem(serverItemId) },
                             onQuantityChange = { newQty ->
                                 scope.launch {
-                                    viewModel.updateItemQuantity(id, newQty)
+                                    viewModel.updateItemQuantity(serverItemId, newQty)
                                 }
                             }
                         )
@@ -173,7 +167,6 @@ fun CartItemRow(
     val scope = rememberCoroutineScope()
     val productRepository = ProductRepository()
 
-    // ✅ Tạo ImageRequest giống Box
     val imageRequest = remember(item.image) {
         item.image?.let { base64String ->
             if (base64String.startsWith("data:image")) {
@@ -185,13 +178,12 @@ fun CartItemRow(
                     .build()
             } else {
                 coil.request.ImageRequest.Builder(context)
-                    .data(item.image ?: "") // ✅ ép null thành ""
+                    .data(item.image ?: "")
                     .crossfade(true)
                     .build()
             }
         }
     }
-
 
     Column {
         Row(
@@ -200,13 +192,11 @@ fun CartItemRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Checkbox chọn sản phẩm
             Checkbox(
                 checked = isSelected,
                 onCheckedChange = { onToggleSelect() }
             )
 
-            // Ảnh sản phẩm
             if (imageRequest != null) {
                 AsyncImage(
                     model = imageRequest,
@@ -232,7 +222,6 @@ fun CartItemRow(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                // Tên sản phẩm (giới hạn 1 dòng)
                 Text(
                     text = item.name.orEmpty(),
                     fontWeight = FontWeight.Bold,
@@ -241,13 +230,11 @@ fun CartItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Size và màu
                 Text(
                     text = "Size: ${item.size} | Màu: ${item.color}",
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                // Giá sản phẩm
                 Text(
                     text = "Giá: ${item.price.toDecimalString()} VND",
                     style = MaterialTheme.typography.bodyMedium,
@@ -257,7 +244,6 @@ fun CartItemRow(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Tăng/giảm số lượng
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {
                         if (item.quantity > 1) {
@@ -302,17 +288,14 @@ fun CartItemRow(
                 }
             }
 
-            // Nút xóa
             IconButton(onClick = onDelete) {
                 Icon(Icons.Outlined.Delete, contentDescription = "Xóa", tint = Color.Red)
             }
         }
 
-        // ✅ Đường kẻ xám mờ dưới mỗi item
         Divider(color = Color.LightGray, thickness = 1.dp)
     }
 }
-
 
 @Composable
 fun BottomNavigationBarCart(currentScreen: String = "Cart") {
@@ -338,7 +321,6 @@ fun BottomNavigationBarCart(currentScreen: String = "Cart") {
             BottomNavigationItem(
                 selected = currentScreen == label,
                 onClick = {
-                    // 👉 Khi click chuyển sang màn mới nếu chưa phải màn hiện tại
                     if (currentScreen != label) {
                         context.startActivity(Intent(context, activityClass))
                     }
@@ -348,7 +330,6 @@ fun BottomNavigationBarCart(currentScreen: String = "Cart") {
                         imageVector = icon,
                         contentDescription = label,
                         modifier = Modifier.size(20.dp),
-                        // 👉 Sửa tại đây: Nếu được chọn thì icon màu đen, không thì màu xám
                         tint = if (currentScreen == label) Color.Black else Color.Gray
                     )
                 },
@@ -356,7 +337,6 @@ fun BottomNavigationBarCart(currentScreen: String = "Cart") {
                     Text(
                         text = label,
                         fontSize = 10.sp,
-                        // 👉 Sửa tại đây: Nếu được chọn thì chữ màu đen, không thì màu xám
                         color = if (currentScreen == label) Color.Black else Color.Gray
                     )
                 }
@@ -364,5 +344,6 @@ fun BottomNavigationBarCart(currentScreen: String = "Cart") {
         }
     }
 }
+
 
 

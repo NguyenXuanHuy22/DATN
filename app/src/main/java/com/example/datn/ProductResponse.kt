@@ -1,13 +1,15 @@
 package com.example.datn
 
-
 data class ProductResponse(
     val _id: String,
     val category: String,
     val name: String,
-    val price: Int,
+    val originalPrice: Int,       // ✅ giá gốc
+    val salePrice: Int,           // ✅ giá khuyến mãi
     val image: String,
+    val extraImages: List<String>, // ✅ nhiều ảnh phụ
     val description: String,
+    val status: String,           // ✅ trạng thái sản phẩm
     val variants: List<ProductVariantResponse>
 )
 
@@ -23,9 +25,12 @@ fun ProductResponse.toProduct(): Product {
         _id = _id,
         category = category,
         name = name,
-        price = price,
+        originalPrice = originalPrice,
+        salePrice = salePrice,
         image = image,
+        extraImages = extraImages,
         description = description,
+        status = status,
         variants = variants.map {
             ProductVariant(it.size, it.color, it.quantity)
         }

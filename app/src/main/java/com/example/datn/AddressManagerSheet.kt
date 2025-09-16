@@ -135,8 +135,6 @@ fun AddressManagerSheet(
                     }
                 }
             }
-
-
             if (deleteConfirm != null) {
                 val target = deleteConfirm!!
                 AlertDialog(

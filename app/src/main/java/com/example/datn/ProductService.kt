@@ -47,7 +47,7 @@ interface ProductService {
 
     // ===== Order =====
     @POST("api/orders")
-    suspend fun createOrder(@Body order: Order): Response<Order>
+    suspend fun createOrder(@Body order: CreateOrderRequest): Response<Order>
 
     @GET("api/orders/user/{userId}")
     suspend fun getOrdersByUser(@Path("userId") userId: String): Response<List<Order>>
@@ -55,8 +55,14 @@ interface ProductService {
     @GET("api/orders/{id}/detail")
     suspend fun getOrderDetail(@Path("id") orderId: String): Response<Order>
 
+    // Gửi PATCH request kèm note huỷ
     @PATCH("api/orders/{id}/cancel")
-    suspend fun cancelOrder(@Path("id") orderId: String): Response<CancelOrderResponse>
+    suspend fun cancelOrder(
+        @Path("id") orderId: String,
+        @Body request: CancelOrderRequest
+    ): Response<CancelOrderResponse>
+
+
 
     // ===== Cart =====
     @DELETE("api/cart-items/{itemId}")

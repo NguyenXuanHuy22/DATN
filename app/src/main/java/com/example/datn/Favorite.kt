@@ -40,7 +40,9 @@ import com.example.datn.ui.theme.DATNTheme
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.datn.utils.toDecimalString
 
 
 class Favorite : ComponentActivity() {
@@ -129,12 +131,15 @@ fun FavoriteScreen(favoriteViewModel: FavoriteViewModel = viewModel()) {
                             _id = item.productId,
                             category = "",
                             name = item.name,
-                            price = item.price,
+                            originalPrice = item.price,   // dùng item.price làm giá gốc
+                            salePrice = 0,                // nếu chưa có thì set mặc định = 0
                             image = item.image,
                             description = "",
+                            status = "còn hàng",          // thêm nếu cần
+                            extraImages = emptyList(),    // thêm nếu cần
                             variants = emptyList()
                         ),
-                        onDelete = {
+                                onDelete = {
                             userId?.let { favoriteViewModel.deleteWishlistItem(it, item.productId) }
                         },
                         onClick = {
@@ -148,7 +153,6 @@ fun FavoriteScreen(favoriteViewModel: FavoriteViewModel = viewModel()) {
         }
     }
 }
-
 
 @Composable
 fun FavoriteItem(
@@ -242,16 +246,43 @@ fun FavoriteItem(
             color = Color.Black
         )
 
-        Text(
-            text = "${product.price.toInt()} VND",
-            color = Color(0xFFD32F2F), // đỏ đậm giống hình mẫu
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
+        //  Hiển thị giá (ưu tiên salePrice)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            if (product.salePrice != null && product.salePrice > 0) {
+                // Có giảm giá
+                product.originalPrice?.takeIf { it > 0 }?.let {
+                    Text(
+                        text = "${it.toInt().toDecimalString()} VND",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        textDecoration = TextDecoration.LineThrough,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                }
+
+                Text(
+                    text = "${product.salePrice.toDecimalString().toInt()} VND",
+                    color = Color(0xFFD32F2F),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            } else {
+                // Không giảm giá → chỉ hiển thị originalPrice
+                product.originalPrice?.takeIf { it > 0 }?.let {
+                    Text(
+                        text = "${it.toInt().toDecimalString()} VND",
+                        color = Color(0xFFD32F2F),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
     }
 }
-
-
 
 @Composable
 fun BottomNavigationBarrr(currentScreen: String) {

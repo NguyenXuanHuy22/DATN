@@ -1,9 +1,10 @@
 package com.example.datn
 
 import com.google.gson.annotations.SerializedName
+import java.io.Serializable
 
 data class Order(
-    @SerializedName("_id") val orderId: String = "",   // mặc định rỗng
+    @SerializedName("_id") val orderId: String = "",
     @SerializedName("userId") val userId: String = "",
     @SerializedName("items") val items: List<OrderItem> = emptyList(),
     @SerializedName("total") val total: Int = 0,
@@ -14,7 +15,23 @@ data class Order(
 
     @SerializedName("customerName") val customerName: String? = null,
     @SerializedName("customerPhone") val customerPhone: String? = null,
-    @SerializedName("customerAddress") val customerAddress: String? = null
+    @SerializedName("customerAddress") val customerAddress: String? = null,
+
+    @SerializedName("notes") val notes: List<OrderNote> = emptyList(),  // ✅ parse list notes từ API
+    @SerializedName("cancelNote") val cancelNote: String? = null
+)
+
+data class CreateOrderRequest(
+    @SerializedName("userId") val userId: String,
+    @SerializedName("items") val items: List<OrderItem>,
+    @SerializedName("total") val total: Int,
+    @SerializedName("paymentMethod") val paymentMethod: String,
+    @SerializedName("status") val status: String,
+    @SerializedName("date") val date: String,
+    @SerializedName("customerName") val customerName: String?,
+    @SerializedName("customerPhone") val customerPhone: String?,
+    @SerializedName("customerAddress") val customerAddress: String?,
+    @SerializedName("orderNote") val orderNote: String? = null // 👈 gửi note khách nhập lên API
 )
 
 data class OrderItem(
@@ -28,4 +45,11 @@ data class OrderItem(
     @SerializedName("color") val color: String = "",
     @SerializedName("subtotal") val subtotal: Int = 0,
     @SerializedName("isReviewed") val isReviewed: Boolean = false,
+) : Serializable
+
+data class OrderNote(
+    @SerializedName("type") val type: String = "",
+    @SerializedName("message") val message: String = "",
+    @SerializedName("date") val date: String = "",
+    @SerializedName("_id") val id: String = ""
 )

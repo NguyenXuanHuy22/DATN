@@ -14,7 +14,13 @@ data class CartItem(
     val color: String? = null,
     val maxQuantity: Int = 0,
     val userId: String? = null
-)
+) {
+    // 🔑 Sinh id duy nhất cho từng biến thể sản phẩm
+    fun uniqueId(): String {
+        return "${productId}_${size}_${color}"
+    }
+}
+
 
 fun CartItem.toDtoForCreate(): CartItemDto {
     return CartItemDto(

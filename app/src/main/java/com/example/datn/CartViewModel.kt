@@ -22,15 +22,13 @@ class CartViewModel : ViewModel() {
     private var currentCartId: String? = null
     private var currentUserId: String? = null
 
+    // 👉 sửa: dùng uniqueId() thay vì itemId
     val totalPrice: StateFlow<Int> = combine(_cartItems, _selectedItems) { items, selected ->
-        items.filter { selected.contains(it.itemId) }
+        items.filter { selected.contains(it.uniqueId()) }
             .sumOf { it.price * it.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    // Bỏ phí vận chuyển, luôn trả 0
     val shippingFee: StateFlow<Int> = flowOf(0).stateIn(viewModelScope, SharingStarted.Eagerly, 0)
-
-    // grandTotal = totalPrice (không cộng phí ship)
     val grandTotal: StateFlow<Int> = totalPrice
 
     fun loadCart(userId: String) {
@@ -64,17 +62,17 @@ class CartViewModel : ViewModel() {
     }
 
 
-    fun toggleItemSelection(itemId: String) {
+    fun toggleItemSelection(uniqueId: String) {
         _selectedItems.value = _selectedItems.value.toMutableSet().apply {
-            if (contains(itemId)) remove(itemId) else add(itemId)
+            if (contains(uniqueId)) remove(uniqueId) else add(uniqueId)
         }
     }
 
-    fun updateItemQuantity(itemId: String, newQuantity: Int) {
+    fun updateItemQuantity(uniqueId: String, newQuantity: Int) {
         viewModelScope.launch {
             try {
                 val updatedList = _cartItems.value.map {
-                    if (it.itemId == itemId) it.copy(quantity = newQuantity) else it
+                    if (it.uniqueId() == uniqueId) it.copy(quantity = newQuantity) else it
                 }
                 _cartItems.value = updatedList
                 updateCartOnServer(updatedList)
@@ -112,7 +110,6 @@ class CartViewModel : ViewModel() {
             }
         }
     }
-
 
     fun addToCart(item: CartItem) {
         viewModelScope.launch {

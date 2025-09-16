@@ -4,7 +4,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    const val BASE_URL = "http://192.168.1.174:5000/"
+    const val BASE_URL = "http://192.168.99.100:5000/"
     private const val PROVINCES_BASE = "https://provinces.open-api.vn/"
 
     private val retrofit: Retrofit = Retrofit.Builder()

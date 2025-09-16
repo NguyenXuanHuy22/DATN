@@ -6,9 +6,12 @@ data class ProductData(
     @SerializedName("_id") val _id: String?,
     @SerializedName("category") val category: String?,
     @SerializedName("name") val name: String?,
-    @SerializedName("price") val price: Int?,
+    @SerializedName("originalPrice") val originalPrice: Int?,   // ✅ giá gốc
+    @SerializedName("salePrice") val salePrice: Int?,           // ✅ giá khuyến mãi
     @SerializedName("image") val image: String?,
+    @SerializedName("extraImages") val extraImages: List<String>?, // ✅ danh sách ảnh phụ
     @SerializedName("description") val description: String?,
+    @SerializedName("status") val status: String?,              // ✅ trạng thái hàng
     @SerializedName("variants") val variants: List<ProductVariantData>?
 )
 
@@ -23,9 +26,12 @@ fun ProductData.toProduct(): Product {
         _id = _id ?: "",
         category = category ?: "",
         name = name ?: "",
-        price = price ?: 0,
+        originalPrice = originalPrice ?: 0,
+        salePrice = salePrice ?: 0,
         image = image ?: "",
+        extraImages = extraImages ?: emptyList(),
         description = description ?: "",
+        status = status ?: "còn hàng",
         variants = variants?.map {
             ProductVariant(it.size, it.color, it.quantity)
         } ?: emptyList()

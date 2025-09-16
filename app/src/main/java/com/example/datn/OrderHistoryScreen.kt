@@ -240,7 +240,7 @@ fun OrderCard(order: Order) {
                 color = Color.Gray
             )
             Text(
-                text = "Tổng tiền: ${order.total.toDecimalString()}đ",
+                text = "Tổng tiền: ${order.total.toDecimalString()}VND",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
 
