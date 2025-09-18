@@ -22,14 +22,19 @@ class CartViewModel : ViewModel() {
     private var currentCartId: String? = null
     private var currentUserId: String? = null
 
-    // 👉 sửa: dùng uniqueId() thay vì itemId
+    // ✅ Tính tổng tiền dựa trên các item được chọn (dùng uniqueId)
     val totalPrice: StateFlow<Int> = combine(_cartItems, _selectedItems) { items, selected ->
         items.filter { selected.contains(it.uniqueId()) }
             .sumOf { it.price * it.quantity }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    val shippingFee: StateFlow<Int> = flowOf(0).stateIn(viewModelScope, SharingStarted.Eagerly, 0)
-    val grandTotal: StateFlow<Int> = totalPrice
+    val shippingFee: StateFlow<Int> =
+        flowOf(0).stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    // ✅ Tổng cộng
+    val grandTotal: StateFlow<Int> =
+        combine(totalPrice, shippingFee) { total, ship -> total + ship }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     fun loadCart(userId: String) {
         currentUserId = userId
@@ -39,6 +44,7 @@ class CartViewModel : ViewModel() {
                 currentCartId = cart._id
                 _cartItems.value = cart.items?.map { it.toCartItem() } ?: emptyList()
                 _errorMessage.value = null
+                _selectedItems.value = emptySet()
             } catch (e: HttpException) {
                 if (e.code() == 404) {
                     _cartItems.value = emptyList()
@@ -61,18 +67,19 @@ class CartViewModel : ViewModel() {
         }
     }
 
-
     fun toggleItemSelection(uniqueId: String) {
         _selectedItems.value = _selectedItems.value.toMutableSet().apply {
             if (contains(uniqueId)) remove(uniqueId) else add(uniqueId)
         }
     }
 
-    fun updateItemQuantity(uniqueId: String, newQuantity: Int) {
+    fun updateItemQuantity(id: String, newQuantity: Int) {
         viewModelScope.launch {
             try {
                 val updatedList = _cartItems.value.map {
-                    if (it.uniqueId() == uniqueId) it.copy(quantity = newQuantity) else it
+                    if (it.itemId == id || it.uniqueId() == id)
+                        it.copy(quantity = newQuantity)
+                    else it
                 }
                 _cartItems.value = updatedList
                 updateCartOnServer(updatedList)
@@ -82,31 +89,24 @@ class CartViewModel : ViewModel() {
         }
     }
 
-    fun deleteItem(itemId: String?) {
-        val cartId = currentCartId ?: run {
-            _errorMessage.value = "Không thể xoá sản phẩm: cartId null"
-            return
-        }
-        val validItemId = itemId ?: run {
+    fun deleteItem(id: String) {
+        val cartId = currentCartId ?: return
+        val itemToDelete = _cartItems.value.find { it.itemId == id || it.uniqueId() == id }
+        val validItemId = itemToDelete?.itemId ?: run {
             _errorMessage.value = "Không thể xoá sản phẩm: itemId null"
             return
         }
 
-        // Lưu danh sách cũ để rollback nếu xoá fail
         val oldList = _cartItems.value
-
-        // Cập nhật UI ngay lập tức (xoá item khỏi danh sách)
         _cartItems.value = oldList.filter { it.itemId != validItemId }
 
         viewModelScope.launch {
             try {
                 RetrofitClient.cartService.deleteItemFromCart(cartId, validItemId)
-                Log.d("DeleteItem", "✅ Xóa thành công itemId: $validItemId")
+                _selectedItems.value = _selectedItems.value - (itemToDelete.uniqueId())
             } catch (e: Exception) {
-                // Rollback nếu server xoá thất bại
                 _cartItems.value = oldList
                 _errorMessage.value = "Không thể xoá sản phẩm: ${e.message}"
-                Log.e("DeleteItem", "❌ Lỗi khi xoá sản phẩm: ${e.message}", e)
             }
         }
     }
@@ -115,8 +115,6 @@ class CartViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val userId = item.userId
-                Log.d("CART", "User ID: $userId")
-
                 val cart = try {
                     RetrofitClient.cartService.getCartByUserId(userId!!)
                 } catch (e: HttpException) {
@@ -127,12 +125,11 @@ class CartViewModel : ViewModel() {
                         )
                         val created = RetrofitClient.cartService.createCart(newCart)
                         currentCartId = created._id
-                        currentUserId = userId!!
+                        currentUserId = userId
                         _cartItems.value = created.items.map { it.toCartItem() }
                         return@launch
                     } else throw e
                 }
-
 
                 currentCartId = cart._id
                 currentUserId = userId
@@ -141,10 +138,8 @@ class CartViewModel : ViewModel() {
                     cartId = cart._id,
                     newItem = item.toDtoForCreate()
                 )
-
                 _cartItems.value = response.items.map { it.toCartItem() }
             } catch (e: Exception) {
-                Log.e("CART", "Lỗi khi thêm vào giỏ hàng", e)
                 _errorMessage.value = "Lỗi khi thêm vào giỏ hàng: ${e.message}"
             }
         }

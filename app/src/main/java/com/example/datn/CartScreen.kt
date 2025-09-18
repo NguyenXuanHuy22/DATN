@@ -65,12 +65,13 @@ class CartScreen : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun CartScreenContent(viewModel: CartViewModel, userId: String) {
     val cartItems by viewModel.cartItems.collectAsState()
     val selectedItems by viewModel.selectedItems.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val grandTotal by viewModel.grandTotal.collectAsState()
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -78,13 +79,14 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         viewModel.loadCart(userId)
     }
 
-    val grandTotal by viewModel.grandTotal.collectAsState()
-
     Scaffold(
         bottomBar = {
             Column {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Tổng cộng: ${grandTotal.toDecimalString()} VND", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Tổng cộng: ${grandTotal.toDecimalString()} VND",
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Button(
@@ -92,9 +94,17 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                             if (selectedItems.isEmpty()) {
                                 Toast.makeText(context, "Vui lòng chọn sản phẩm để đặt hàng", Toast.LENGTH_SHORT).show()
                             } else {
-                                val selectedIds = ArrayList(selectedItems) // bây giờ chứa server itemId
+                                // Lọc đúng sản phẩm đã chọn
+                                val selectedProducts = cartItems.filter { selectedItems.contains(it.uniqueId()) }
+                                if (selectedProducts.isEmpty()) {
+                                    Toast.makeText(context, "Không có sản phẩm hợp lệ", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+
+                                // Truyền trực tiếp danh sách sản phẩm qua Parcelable
                                 val intent = Intent(context, OrderScreen::class.java).apply {
-                                    putStringArrayListExtra("selectedItemIds", selectedIds)
+                                    putExtra("userId", userId)
+                                    putParcelableArrayListExtra("selectedProducts", ArrayList(selectedProducts))
                                 }
                                 context.startActivity(intent)
                             }
@@ -130,21 +140,19 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                     textAlign = TextAlign.Center
                 )
             }
+
             else -> {
                 LazyColumn(modifier = Modifier.padding(padding)) {
                     items(cartItems) { item ->
-                        // DÙNG itemId do server trả về nếu có, nếu không có fallback về uniqueId
-                        val serverItemId = item.itemId ?: item.uniqueId()
+                        val key = item.itemId ?: item.uniqueId()
 
                         CartItemRow(
                             item = item,
-                            isSelected = selectedItems.contains(serverItemId),
-                            onToggleSelect = { viewModel.toggleItemSelection(serverItemId) },
-                            onDelete = { viewModel.deleteItem(serverItemId) },
+                            isSelected = selectedItems.contains(item.uniqueId()),
+                            onToggleSelect = { viewModel.toggleItemSelection(item.uniqueId()) },
+                            onDelete = { viewModel.deleteItem(key) },
                             onQuantityChange = { newQty ->
-                                scope.launch {
-                                    viewModel.updateItemQuantity(serverItemId, newQty)
-                                }
+                                scope.launch { viewModel.updateItemQuantity(key, newQty) }
                             }
                         )
                     }
@@ -153,7 +161,6 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
         }
     }
 }
-
 
 @Composable
 fun CartItemRow(
@@ -279,7 +286,8 @@ fun CartItemRow(
                                     ).show()
                                 }
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Lỗi kiểm tra số lượng", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Lỗi kiểm tra số lượng", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         }
                     }) {
@@ -296,6 +304,7 @@ fun CartItemRow(
         Divider(color = Color.LightGray, thickness = 1.dp)
     }
 }
+
 
 @Composable
 fun BottomNavigationBarCart(currentScreen: String = "Cart") {

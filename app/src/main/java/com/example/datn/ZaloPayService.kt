@@ -13,8 +13,15 @@ interface ZaloPayService {
         @Body request: ZlpCreatePaymentRequest
     ): Response<ZlpBackendCreateResponse>
 
+    // ✅ THÊM: Method query status (POST /query với body {app_trans_id})
+    @POST("api/payments/zalopay/query")
+    suspend fun queryStatus(
+        @Body request: ZlpQueryRequest // Giả sử data class: data class ZlpQueryRequest(val app_trans_id: String)
+    ): Response<ZlpQueryResponse> // Giả sử response có return_code, return_message
+
+    // Giữ /return nếu cần, nhưng không dùng cho query
     @GET("api/payments/zalopay/return")
-    suspend fun returnOrder(
+    suspend fun checkOrderStatus(
         @Query("apptransid") appTransId: String
     ): Response<ReturnOrderResponse>
 }

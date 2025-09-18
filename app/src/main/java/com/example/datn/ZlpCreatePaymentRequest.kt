@@ -4,13 +4,13 @@ import com.google.gson.annotations.SerializedName
 
 data class ZlpCreatePaymentRequest(
     val userId: String,
-    val items: List<OrderItem>,
+    val items: List<CartItem>,
     val customerName: String,
     val customerPhone: String,
     val customerAddress: String,
     @SerializedName("redirect_url")
     val redirectUrl: String,
-    @SerializedName("orderNote") // 🔥 match với backend
-    val orderNote: String? = null
+    @SerializedName("description") // 🔥 Sửa từ orderNote thành description để khớp backend
+    val description: String? = null
 )
 

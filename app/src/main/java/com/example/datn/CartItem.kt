@@ -1,8 +1,10 @@
 package com.example.datn
 
 import java.util.UUID
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
-
+@Parcelize
 data class CartItem(
     val itemId: String? = null,   // _id từ MongoDB
     val productId: String? = null,
@@ -14,11 +16,8 @@ data class CartItem(
     val color: String? = null,
     val maxQuantity: Int = 0,
     val userId: String? = null
-) {
-    // 🔑 Sinh id duy nhất cho từng biến thể sản phẩm
-    fun uniqueId(): String {
-        return "${productId}_${size}_${color}"
-    }
+) : Parcelable { // ✅ Bây giờ CartItem có thể truyền qua Intent
+    fun uniqueId(): String = "${productId}_${size}_${color}"
 }
 
 

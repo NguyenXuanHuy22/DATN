@@ -46,6 +46,7 @@
             android:exported="false"
             android:label="@string/title_activity_order_history_screen"
             android:theme="@style/Theme.DATN" />
+
         <activity
             android:name=".OrderScreen"
             android:exported="true"
@@ -58,10 +59,15 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="myapp" android:host="payment" />
+
+                <data
+                    android:scheme="myapp"
+                    android:host="payment"
+                    android:pathPrefix="/result" />
             </intent-filter>
 
         </activity>
+
 
         <activity
             android:name=".BannerManager"
@@ -129,8 +135,6 @@
             android:name=".ZaloPayWebViewActivity"
             android:exported="false"
             android:theme="@style/Theme.DATN" />
-
-
 
         <activity
             android:name=".SplashScreen"

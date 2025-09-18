@@ -22,17 +22,45 @@ data class ZlpCreatePaymentResponse(
 data class ZlpBackendCreateResponse(
     val message: String? = null,
     val orderId: String? = null,
-    val app_trans_id: String? = null,
+    @SerializedName("app_trans_id")
+    val appTransId: String? = null,
     val amount: Long? = null,
     val paymentUrl: String? = null,
     val zpTransToken: String? = null,
+    @SerializedName("rawZalo")
     val rawZalo: ZlpCreatePaymentResponse? = null
 )
 
 data class ReturnOrderResponse(
     val status: String, // "success" hoặc "failed"
     val orderId: String?,
-    val app_trans_id: String?,
+    @SerializedName("app_trans_id")
+    val appTransId: String?,
     val total: Long?,
-    val order_status: String?
+    @SerializedName("order_status")
+    val orderStatus: String?
+)
+
+data class ZlpQueryRequest(
+    @SerializedName("app_trans_id")
+    val appTransId: String
+)
+
+data class ZlpQueryResponse(
+    @SerializedName("return_code")
+    val returnCode: Int? = null,
+    @SerializedName("return_message")
+    val returnMessage: String? = null,
+    @SerializedName("sub_return_code")
+    val subReturnCode: Int? = null,
+    @SerializedName("sub_return_message")
+    val subReturnMessage: String? = null,
+    @SerializedName("app_trans_id")
+    val appTransId: String? = null,
+    @SerializedName("amount")
+    val amount: Long? = null,
+    @SerializedName("zp_trans_id")
+    val zpTransId: String? = null,
+    @SerializedName("status")
+    val status: Int? = null // 1: success, 0: fail, theo docs ZaloPay
 )
