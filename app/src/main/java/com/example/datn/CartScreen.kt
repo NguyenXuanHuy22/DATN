@@ -94,17 +94,18 @@ fun CartScreenContent(viewModel: CartViewModel, userId: String) {
                             if (selectedItems.isEmpty()) {
                                 Toast.makeText(context, "Vui lòng chọn sản phẩm để đặt hàng", Toast.LENGTH_SHORT).show()
                             } else {
-                                // Lọc đúng sản phẩm đã chọn
                                 val selectedProducts = cartItems.filter { selectedItems.contains(it.uniqueId()) }
                                 if (selectedProducts.isEmpty()) {
                                     Toast.makeText(context, "Không có sản phẩm hợp lệ", Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
 
-                                // Truyền trực tiếp danh sách sản phẩm qua Parcelable
+                                // ✅ Truyền danh sách ID thay vì full CartItem
+                                val selectedIds = ArrayList(selectedProducts.map { it.uniqueId() })
+
                                 val intent = Intent(context, OrderScreen::class.java).apply {
                                     putExtra("userId", userId)
-                                    putParcelableArrayListExtra("selectedProducts", ArrayList(selectedProducts))
+                                    putStringArrayListExtra("selectedProductIds", selectedIds)
                                 }
                                 context.startActivity(intent)
                             }

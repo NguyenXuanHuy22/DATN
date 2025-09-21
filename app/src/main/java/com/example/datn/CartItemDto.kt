@@ -31,3 +31,17 @@ fun CartItemDto.toCartItem(): CartItem {
         userId = userId
     )
 }
+
+fun CartItem.toDto(isUpdate: Boolean = false): CartItemDto {
+    return CartItemDto(
+        _id = if (isUpdate) this.itemId else null,
+        productId = this.productId ?: "",
+        image = this.image,
+        name = this.name ?: "",
+        price = this.price,
+        size = this.size ?: "",
+        color = this.color ?: "",
+        quantity = this.quantity,
+        userId = this.userId ?: ""
+    )
+}

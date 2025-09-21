@@ -103,12 +103,24 @@ fun RegisterScreenContent() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                val emailRegex = Regex("^[a-zA-Z0-9._%+-]+@gmail\\.com$")
+                val phoneRegex = Regex("^(0[3|5|7|8|9])[0-9]{8}$")
+
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it; emailError = "" },
+                    onValueChange = {
+                        email = it
+                        emailError = if (it.isEmpty()) {
+                            "Email không được để trống"
+                        } else if (!emailRegex.matches(it)) {
+                            "Email phải đúng định dạng Gmail (ví dụ: abc@gmail.com)"
+                        } else ""
+                    },
                     label = { Text("Email") },
                     isError = emailError.isNotEmpty(),
-                    supportingText = { if (emailError.isNotEmpty()) Text(emailError, color = MaterialTheme.colorScheme.error) },
+                    supportingText = {
+                        if (emailError.isNotEmpty()) Text(emailError, color = MaterialTheme.colorScheme.error)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -117,10 +129,19 @@ fun RegisterScreenContent() {
 
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { phone = it; phoneError = "" },
+                    onValueChange = {
+                        phone = it
+                        phoneError = if (it.isEmpty()) {
+                            "Số điện thoại không được để trống"
+                        } else if (!phoneRegex.matches(it)) {
+                            "Số điện thoại phải đủ 10 số và đúng định dạng VN (03,05,07,08,09)"
+                        } else ""
+                    },
                     label = { Text("Số điện thoại") },
                     isError = phoneError.isNotEmpty(),
-                    supportingText = { if (phoneError.isNotEmpty()) Text(phoneError, color = MaterialTheme.colorScheme.error) },
+                    supportingText = {
+                        if (phoneError.isNotEmpty()) Text(phoneError, color = MaterialTheme.colorScheme.error)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )

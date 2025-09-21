@@ -58,9 +58,8 @@ class OrderScreen : ComponentActivity() {
         super.onCreate(savedInstanceState)
         handleDeepLink(intent)
 
-        // ✅ Nhận trực tiếp danh sách sản phẩm từ CartScreen (Parcelable)
-        val selectedProducts =
-            intent.getParcelableArrayListExtra<CartItem>("selectedProducts") ?: arrayListOf()
+        // ✅ Nhận danh sách productIds thay vì full CartItem
+        val selectedIds = intent.getStringArrayListExtra("selectedProductIds") ?: arrayListOf()
 
         // ✅ Lấy userId từ intent hoặc SharedPreferences
         val userId = intent.getStringExtra("userId")
@@ -69,12 +68,9 @@ class OrderScreen : ComponentActivity() {
         setContent {
             DATNTheme {
                 if (userId != null) {
-                    Log.d("OrderScreen", "SELECTED_PRODUCTS: $selectedProducts")
-
-                    // ✅ Truyền trực tiếp danh sách sản phẩm đã chọn
                     OrderScreenContent(
                         userId = userId,
-                        selectedItems = selectedProducts,
+                        selectedIds = selectedIds,
                         paymentResult = paymentResult,
                         appTransId = appTransId
                     )
@@ -94,7 +90,7 @@ class OrderScreen : ComponentActivity() {
         intent?.data?.let { uri ->
             if (uri.scheme == "myapp" && uri.host == "payment") {
                 paymentResult.value = uri.getQueryParameter("status")
-                appTransId.value = uri.getQueryParameter("apptransid") // ✅ Lấy appTransId từ deep link
+                appTransId.value = uri.getQueryParameter("apptransid")
             }
         }
     }
@@ -103,13 +99,9 @@ class OrderScreen : ComponentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1001 && resultCode == RESULT_OK) {
             val status = data?.getStringExtra("status")
-            val transId = data?.getStringExtra("appTransId") // ✅ Lấy appTransId từ WebView
+            val transId = data?.getStringExtra("appTransId")
             appTransId.value = transId
-            if (status == "success") {
-                paymentResult.value = "success"
-            } else {
-                paymentResult.value = "failed"
-            }
+            paymentResult.value = if (status == "success") "success" else "failed"
         }
     }
 }
@@ -117,7 +109,7 @@ class OrderScreen : ComponentActivity() {
 @Composable
 fun OrderScreenContent(
     userId: String,
-    selectedItems: List<CartItem>,
+    selectedIds: List<String>,
     paymentResult: MutableState<String?>,
     appTransId: MutableState<String?>
 ) {
@@ -128,38 +120,52 @@ fun OrderScreenContent(
     var isPlacing by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf("") }
+    var selectedItems by remember { mutableStateOf<List<CartItem>>(emptyList()) }
 
-    // ✅ Load user & địa chỉ
-    LaunchedEffect(userId) {
+    // ✅ Load user + địa chỉ + chi tiết sản phẩm từ server
+    LaunchedEffect(userId, selectedIds) {
         try {
+            // Lấy thông tin user
             val usersResp = RetrofitClient.apiService.getUsers()
             if (usersResp.isSuccessful) {
                 val users = usersResp.body() ?: emptyList()
                 user = users.find { it._id == userId }
             }
 
+            // Lấy địa chỉ
             val addrResp = RetrofitClient.addressService.getAddresses(userId)
             if (addrResp.isSuccessful) {
                 val addresses = addrResp.body() ?: emptyList()
                 selectedAddress = addresses.firstOrNull { it.isDefault } ?: addresses.firstOrNull()
             }
+
+            // Lấy giỏ hàng để filter sản phẩm đã chọn
+            val cartResp = RetrofitClient.cartService.getCartByUserId(userId)
+            if (cartResp.isSuccessful) {
+                val cartBody = cartResp.body()
+                val allItems: List<CartItem> = cartBody?.items
+                    ?.map { it.toCartItem() } ?: emptyList()
+                selectedItems = allItems.filter { item -> selectedIds.contains(item.uniqueId()) }
+            } else {
+                Log.e("OrderScreen", "Cart API failed: ${cartResp.code()} - ${cartResp.message()}")
+            }
         } catch (e: Exception) {
-            Log.e("OrderScreen", "Error loading user/address: ${e.message}")
+            Log.e("OrderScreen", "Error loading data", e)
         }
     }
 
-    // ✅ FIX: Lắng nghe kết quả thanh toán, query status để confirm trước khi show dialog
+
+    // ✅ Xử lý kết quả thanh toán
     LaunchedEffect(paymentResult.value, appTransId.value) {
         val result = paymentResult.value
         val transId = appTransId.value
         if (result == "success" && transId != null) {
-            // Query status từ backend với ZlpQueryRequest
             try {
                 val queryRequest = ZlpQueryRequest(appTransId = transId)
                 val queryResp = RetrofitClient.zaloPayService.queryStatus(queryRequest)
                 if (queryResp.isSuccessful) {
                     val queryBody = queryResp.body()
-                    if (queryBody?.returnCode == 1) { // ZaloPay success
+                    if (queryBody?.returnCode == 1) {
                         showSuccessDialog = true
                         Toast.makeText(context, "Thanh toán thành công!", Toast.LENGTH_SHORT).show()
                     } else {
@@ -171,12 +177,11 @@ fun OrderScreenContent(
                 }
             } catch (e: Exception) {
                 Log.e("OrderScreen", "Query status error: ${e.message}")
-                Toast.makeText(context, "Lỗi kết nối kiểm tra: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         } else if (result == "failed") {
             Toast.makeText(context, "Thanh toán thất bại", Toast.LENGTH_SHORT).show()
         }
-        // Reset states
+        // Reset
         paymentResult.value = null
         appTransId.value = null
     }
@@ -209,7 +214,7 @@ fun OrderScreenContent(
                             selectedItems,
                             selectedAddress,
                             noteText,
-                            appTransId, // ✅ Truyền state appTransId để lưu từ response
+                            appTransId,
                             { isPlacing = true },
                             { isPlacing = false },
                             { Toast.makeText(context, "Không tạo được thanh toán", Toast.LENGTH_SHORT).show() }
@@ -239,8 +244,6 @@ fun OrderScreenContent(
                 message = "Thanh toán thành công! Đơn hàng đã được xác nhận.",
                 onDismiss = {
                     showSuccessDialog = false
-                    // ✅ FIX: KHÔNG tạo order nữa (backend đã tự tạo sau callback)
-                    // Chỉ navigate về trang chủ
                     val intent = Intent(context, Home::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                     context.startActivity(intent)

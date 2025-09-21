@@ -40,11 +40,22 @@ class CartViewModel : ViewModel() {
         currentUserId = userId
         viewModelScope.launch {
             try {
-                val cart = RetrofitClient.cartService.getCartByUserId(userId)
-                currentCartId = cart._id
-                _cartItems.value = cart.items?.map { it.toCartItem() } ?: emptyList()
-                _errorMessage.value = null
-                _selectedItems.value = emptySet()
+                val resp = RetrofitClient.cartService.getCartByUserId(userId)
+                if (resp.isSuccessful) {
+                    val cartBody = resp.body()
+                    if (cartBody != null) {
+                        currentCartId = cartBody._id
+                        _cartItems.value = cartBody.items.map { it.toCartItem() }
+                        _errorMessage.value = null
+                        _selectedItems.value = emptySet()
+                    } else {
+                        _cartItems.value = emptyList()
+                        _errorMessage.value = "Không có dữ liệu giỏ hàng"
+                    }
+                } else {
+                    _cartItems.value = emptyList()
+                    _errorMessage.value = "Lỗi server: ${resp.code()} - ${resp.message()}"
+                }
             } catch (e: HttpException) {
                 if (e.code() == 404) {
                     _cartItems.value = emptyList()
@@ -114,14 +125,17 @@ class CartViewModel : ViewModel() {
     fun addToCart(item: CartItem) {
         viewModelScope.launch {
             try {
-                val userId = item.userId
-                val cart = try {
-                    RetrofitClient.cartService.getCartByUserId(userId!!)
+                val userId = item.userId ?: return@launch
+
+                // Gọi API lấy giỏ hàng
+                val resp = try {
+                    RetrofitClient.cartService.getCartByUserId(userId)
                 } catch (e: HttpException) {
                     if (e.code() == 404) {
+                        // Nếu không có giỏ hàng -> tạo mới
                         val newCart = CartCreateRequest(
-                            userId = userId!!,
-                            items = listOf(item.toDtoForCreate())
+                            userId = userId,
+                            items = listOf(item.toDto(isUpdate = false)) // dùng mapper gọn hơn
                         )
                         val created = RetrofitClient.cartService.createCart(newCart)
                         currentCartId = created._id
@@ -131,18 +145,29 @@ class CartViewModel : ViewModel() {
                     } else throw e
                 }
 
-                currentCartId = cart._id
-                currentUserId = userId
+                if (resp.isSuccessful) {
+                    val cartBody = resp.body()
+                    if (cartBody != null) {
+                        currentCartId = cartBody._id
+                        currentUserId = userId
 
-                val response = RetrofitClient.cartService.addItemToCart(
-                    cartId = cart._id,
-                    newItem = item.toDtoForCreate()
-                )
-                _cartItems.value = response.items.map { it.toCartItem() }
+                        // Thêm sản phẩm vào cart có sẵn
+                        val response = RetrofitClient.cartService.addItemToCart(
+                            cartId = cartBody._id,
+                            newItem = item.toDto(isUpdate = false)
+                        )
+                        _cartItems.value = response.items.map { it.toCartItem() }
+                    } else {
+                        _errorMessage.value = "Không lấy được giỏ hàng"
+                    }
+                } else {
+                    _errorMessage.value = "Lỗi server: ${resp.code()} - ${resp.message()}"
+                }
             } catch (e: Exception) {
                 _errorMessage.value = "Lỗi khi thêm vào giỏ hàng: ${e.message}"
             }
         }
+
     }
 
     private fun updateCartOnServer(updatedItems: List<CartItem>) {

@@ -1,5 +1,6 @@
 package com.example.datn
 
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -12,7 +13,7 @@ interface CartService {
     @GET("api/carts/user/{userId}")
     suspend fun getCartByUserId(
         @Path("userId") userId: String
-    ): CartResponse
+    ): Response<CartResponse>
 
     @PATCH("api/carts/{cartId}")
     suspend fun updateCart(
@@ -37,5 +38,7 @@ interface CartService {
         @Path("cartId") cartId: String,
         @Path("itemId") itemId: String
     ): CartResponse
+
+
 }
 
