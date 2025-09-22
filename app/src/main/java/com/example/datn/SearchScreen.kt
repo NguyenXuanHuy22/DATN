@@ -27,10 +27,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.datn.utils.toDecimalString
+import java.time.format.TextStyle
 
 @Composable
 fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
@@ -41,7 +44,7 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
         viewModel.getListProducts() //  THÊM DÒNG NÀY
     }
     val suggestions = listOf(
-        "Áo bóng đá", "Áo cầu lông", "Quần áo bóng đá", "Áo bóng rổ"
+        "Áo bóng đá", "Áo cầu lông", "Quần áo bóng đá", "PICKLEBALL"
     )
 
     val filteredProducts = allProducts.filter {
@@ -155,7 +158,27 @@ fun SearchScreen(viewModel: ProductViewModel = androidx.lifecycle.viewmodel.comp
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(product.name, fontWeight = FontWeight.Bold)
-                                    Text("${product.originalPrice} vnd", color = Color.Gray)
+
+                                    if (product.salePrice != null && product.salePrice > 0) {
+                                        // Giá gốc (gạch ngang xám)
+                                        Text(
+                                            text = "${product.originalPrice.toDecimalString()} VND",
+                                            color = Color.Gray,
+                                            textDecoration = TextDecoration.LineThrough
+                                        )
+                                        // Giá sale (màu đỏ)
+                                        Text(
+                                            text = "${product.salePrice.toDecimalString()} VND",
+                                            color = Color.Red,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    } else {
+                                        // Chỉ có giá gốc
+                                        Text(
+                                            text = "${product.originalPrice.toDecimalString()} VND",
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -241,7 +241,7 @@ fun OrderScreenContent(
 
         if (showSuccessDialog) {
             SuccessDialog(
-                message = "Thanh toán thành công! Đơn hàng đã được xác nhận.",
+                message = "Đặt hàng thành công!",
                 onDismiss = {
                     showSuccessDialog = false
                     val intent = Intent(context, Home::class.java)
