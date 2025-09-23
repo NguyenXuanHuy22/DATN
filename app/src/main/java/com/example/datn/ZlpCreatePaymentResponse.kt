@@ -62,5 +62,25 @@ data class ZlpQueryResponse(
     @SerializedName("zp_trans_id")
     val zpTransId: String? = null,
     @SerializedName("status")
-    val status: Int? = null // 1: success, 0: fail, theo docs ZaloPay
+    val status: Int? = null, // 1: success, 0: fail, theo docs ZaloPay
+    @SerializedName("order_status")
+    val orderStatus: String? = null, // ✅ Thêm field order_status từ backend
+    @SerializedName("orderId")
+    val orderId: String? = null // ✅ Thêm field orderId từ backend
+)
+
+// ✅ Thêm data class cho cancel order request
+data class ZlpCancelOrderRequest(
+    @SerializedName("app_trans_id")
+    val appTransId: String
+)
+
+// ✅ Thêm data class cho cancel order response
+data class ZlpCancelOrderResponse(
+    @SerializedName("return_code")
+    val returnCode: Int? = null,
+    @SerializedName("return_message")
+    val returnMessage: String? = null,
+    @SerializedName("order_status")
+    val orderStatus: String? = null
 )

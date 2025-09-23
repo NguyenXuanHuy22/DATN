@@ -97,11 +97,35 @@ class OrderScreen : ComponentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1001 && resultCode == RESULT_OK) {
-            val status = data?.getStringExtra("status")
-            val transId = data?.getStringExtra("appTransId")
-            appTransId.value = transId
-            paymentResult.value = if (status == "success") "success" else "failed"
+        Log.d("OrderScreen", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
+        
+        if (requestCode == 1001) {
+            if (resultCode == RESULT_OK) {
+                val status = data?.getStringExtra("status")
+                val transId = data?.getStringExtra("appTransId")
+                val responseCode = data?.getStringExtra("response_code")
+                
+                Log.d("OrderScreen", "Payment result - status: $status, transId: $transId, responseCode: $responseCode")
+                
+                appTransId.value = transId
+                
+                when {
+                    status == "success" -> {
+                        paymentResult.value = "success"
+                    }
+                    responseCode == "1" -> {
+                        paymentResult.value = "success"
+                    }
+                    else -> {
+                        paymentResult.value = "failed"
+                    }
+                }
+                
+                Log.d("OrderScreen", "Final payment result: ${paymentResult.value}")
+            } else {
+                Log.d("OrderScreen", "Payment cancelled or failed - resultCode: $resultCode")
+                paymentResult.value = "failed"
+            }
         }
     }
 }
@@ -119,8 +143,13 @@ fun OrderScreenContent(
     var selectedMethod by remember { mutableStateOf<PaymentMethod?>(null) }
     var isPlacing by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     var noteText by remember { mutableStateOf("") }
     var selectedItems by remember { mutableStateOf<List<CartItem>>(emptyList()) }
+    var hasWebViewResult by remember { mutableStateOf(false) } // ✅ Track xem WebView đã trả về kết quả chưa
+    var isPaymentInProgress by remember { mutableStateOf(false) } // ✅ Track xem đang thanh toán không
+    var isProcessingResult by remember { mutableStateOf(false) } // ✅ Track xem đang xử lý kết quả không
 
     // ✅ Load user + địa chỉ + chi tiết sản phẩm từ server
     LaunchedEffect(userId, selectedIds) {
@@ -155,36 +184,210 @@ fun OrderScreenContent(
     }
 
 
-    // ✅ Xử lý kết quả thanh toán
+
+    // ✅ TẠM THỜI VÔ HIỆU HÓA - Timeout fallback - query server nếu sau 120 giây không có kết quả từ WebView
+    // LaunchedEffect(isPlacing, appTransId.value, isProcessingResult) {
+    //     if (isPlacing && appTransId.value != null) {
+    //         kotlinx.coroutines.delay(120000) // 120 giây (2 phút)
+    //         // ✅ Chỉ xử lý timeout nếu chưa có kết quả từ WebView, chưa hiển thị dialog và chưa đang xử lý
+    //         if (!hasWebViewResult && !showSuccessDialog && !showErrorDialog && isPaymentInProgress && !isProcessingResult) {
+    //             Log.d("OrderScreen", "Timeout - no WebView result, querying server")
+    //             val transId = appTransId.value
+    //             if (transId != null) {
+    //                 try {
+    //                     val queryRequest = ZlpQueryRequest(appTransId = transId)
+    //                     val queryResp = RetrofitClient.zaloPayService.queryStatus(queryRequest)
+    //                     if (queryResp.isSuccessful) {
+    //                         val queryBody = queryResp.body()
+    //                         if (queryBody?.returnCode == 1) {
+    //                             Log.d("OrderScreen", "Timeout query success - order remains 'CHỜ XÁC NHẬN'")
+    //                             // ✅ Đánh dấu đã có kết quả để tránh xung đột
+    //                             hasWebViewResult = true
+    //                             showSuccessDialog = true
+    //                         } else {
+    //                             Log.d("OrderScreen", "Timeout query failed - updating order to 'ĐÃ HỦY'")
+    //                             // ✅ Đánh dấu đã có kết quả để tránh xung đột
+    //                             hasWebViewResult = true
+    //                             errorMessage = "Thanh toán thất bại"
+    //                             showErrorDialog = true
+    //                             
+    //                             // ✅ Cập nhật status đơn hàng thành "ĐÃ HỦY"
+    //                             try {
+    //                                 val cancelRequest = ZlpCancelOrderRequest(appTransId = transId)
+    //                                 val cancelResp = RetrofitClient.zaloPayService.cancelOrder(cancelRequest)
+    //                                 if (cancelResp.isSuccessful) {
+    //                                     Log.d("OrderScreen", "Order cancelled due to timeout")
+    //                                 }
+    //                             } catch (e: Exception) {
+    //                                 Log.e("OrderScreen", "Error cancelling order on timeout: ${e.message}")
+    //                             }
+    //                         }
+    //                     } else {
+    //                         Log.d("OrderScreen", "Timeout query API failed - updating order to 'ĐÃ HỦY'")
+    //                         // ✅ Đánh dấu đã có kết quả để tránh xung đột
+    //                         hasWebViewResult = true
+    //                         errorMessage = "Không thể xác nhận thanh toán"
+    //                         showErrorDialog = true
+    //                         
+    //                         // ✅ Cập nhật status đơn hàng thành "ĐÃ HỦY"
+    //                         try {
+    //                             val cancelRequest = ZlpCancelOrderRequest(appTransId = transId)
+    //                             val cancelResp = RetrofitClient.zaloPayService.cancelOrder(cancelRequest)
+    //                             if (cancelResp.isSuccessful) {
+    //                                 Log.d("OrderScreen", "Order cancelled due to API failure")
+    //                             }
+    //                         } catch (e: Exception) {
+    //                             Log.e("OrderScreen", "Error cancelling order on API failure: ${e.message}")
+    //                         }
+    //                     }
+    //                 } catch (e: Exception) {
+    //                     Log.e("OrderScreen", "Timeout query error: ${e.message}")
+    //                     // ✅ Đánh dấu đã có kết quả để tránh xung đột
+    //                     hasWebViewResult = true
+    //                     errorMessage = "Lỗi xác nhận thanh toán"
+    //                     showErrorDialog = true
+    //                     
+    //                     // ✅ Cập nhật status đơn hàng thành "ĐÃ HỦY"
+    //                     try {
+    //                         val cancelRequest = ZlpCancelOrderRequest(appTransId = transId)
+    //                         val cancelResp = RetrofitClient.zaloPayService.cancelOrder(cancelRequest)
+    //                         if (cancelResp.isSuccessful) {
+    //                             Log.d("OrderScreen", "Order cancelled due to exception")
+    //                         }
+    //                     } catch (cancelException: Exception) {
+    //                         Log.e("OrderScreen", "Error cancelling order on exception: ${cancelException.message}")
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+    // ✅ Xử lý kết quả thanh toán - chỉ xử lý một lần
     LaunchedEffect(paymentResult.value, appTransId.value) {
         val result = paymentResult.value
         val transId = appTransId.value
-        if (result == "success" && transId != null) {
-            try {
-                val queryRequest = ZlpQueryRequest(appTransId = transId)
-                val queryResp = RetrofitClient.zaloPayService.queryStatus(queryRequest)
-                if (queryResp.isSuccessful) {
-                    val queryBody = queryResp.body()
-                    if (queryBody?.returnCode == 1) {
-                        showSuccessDialog = true
-                        Toast.makeText(context, "Thanh toán thành công!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val errorMsg = queryBody?.returnMessage ?: "Không xác định"
-                        Toast.makeText(context, "Thanh toán thất bại: $errorMsg", Toast.LENGTH_SHORT).show()
+        
+        Log.d("OrderScreen", "Processing payment result: $result, transId: $transId")
+        Log.d("OrderScreen", "Current state - hasWebViewResult: $hasWebViewResult, isProcessingResult: $isProcessingResult")
+        
+        // ✅ Xử lý kết quả từ WebView - chỉ xử lý nếu chưa có kết quả và chưa đang xử lý
+        if (result != null && !hasWebViewResult && !isProcessingResult) {
+            hasWebViewResult = true
+            isProcessingResult = true
+            
+            Log.d("OrderScreen", "=== PROCESSING PAYMENT RESULT ===")
+            Log.d("OrderScreen", "Result: $result, TransId: $transId")
+            
+            if (result == "success") {
+                // ✅ Thanh toán thành công - hiển thị dialog thành công NGAY LẬP TỨC
+                Log.d("OrderScreen", "✅ PAYMENT SUCCESS - Showing success dialog immediately")
+                showSuccessDialog = true
+                
+                // ✅ Query server để xác nhận (chạy background, không ảnh hưởng UI)
+                if (transId != null) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val queryRequest = ZlpQueryRequest(appTransId = transId)
+                            val queryResp = RetrofitClient.zaloPayService.queryStatus(queryRequest)
+                            if (queryResp.isSuccessful) {
+                                val queryBody = queryResp.body()
+                                if (queryBody?.returnCode == 1) {
+                                    Log.d("OrderScreen", "✅ Server confirmed payment - order status: ${queryBody.orderStatus}")
+                                } else {
+                                    Log.e("OrderScreen", "❌ Server query failed: ${queryBody?.returnMessage}")
+                                }
+                            } else {
+                                Log.e("OrderScreen", "❌ Query API failed: ${queryResp.code()}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("OrderScreen", "❌ Query status error: ${e.message}")
+                        }
                     }
-                } else {
-                    Toast.makeText(context, "Lỗi kiểm tra trạng thái: ${queryResp.code()}", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Log.e("OrderScreen", "Query status error: ${e.message}")
+                
+            } else if (result == "failed" && transId != null) {
+                // ✅ Thanh toán thất bại - cập nhật status "ĐÃ HỦY"
+                Log.d("OrderScreen", "❌ PAYMENT FAILED - Updating order to 'ĐÃ HỦY'")
+                errorMessage = "Thanh toán thất bại"
+                showErrorDialog = true
+                
+                // ✅ Cập nhật status đơn hàng thành "ĐÃ HỦY"
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // ✅ Thử gọi ZaloPay cancel API trước
+                        val cancelRequest = ZlpCancelOrderRequest(appTransId = transId)
+                        val cancelResp = RetrofitClient.zaloPayService.cancelOrder(cancelRequest)
+                        if (cancelResp.isSuccessful) {
+                            Log.d("OrderScreen", "✅ Order cancelled via ZaloPay API successfully")
+                        } else {
+                            Log.e("OrderScreen", "❌ ZaloPay cancel API failed: ${cancelResp.code()}")
+                            
+                            // ✅ Fallback: Tìm orderId từ appTransId và gọi Order cancel API
+                            try {
+                                // Query để lấy orderId từ appTransId
+                                val queryRequest = ZlpQueryRequest(appTransId = transId)
+                                val queryResp = RetrofitClient.zaloPayService.queryStatus(queryRequest)
+                                if (queryResp.isSuccessful) {
+                                    val queryBody = queryResp.body()
+                                    val orderId = queryBody?.orderId
+                                    if (!orderId.isNullOrEmpty()) {
+                                        // Gọi Order cancel API
+                                        val orderCancelRequest = CancelOrderRequest(note = "Thanh toán thất bại - tự động hủy")
+                                        val orderCancelResp = RetrofitClient.apiService.cancelOrder(orderId, orderCancelRequest)
+                                        if (orderCancelResp.isSuccessful) {
+                                            Log.d("OrderScreen", "✅ Order cancelled via Order API successfully")
+                                        } else {
+                                            Log.e("OrderScreen", "❌ Order cancel API failed: ${orderCancelResp.code()}")
+                                        }
+                                    } else {
+                                        Log.e("OrderScreen", "❌ No orderId found for appTransId: $transId")
+                                    }
+                                } else {
+                                    Log.e("OrderScreen", "❌ Query API failed: ${queryResp.code()}")
+                                }
+                            } catch (fallbackException: Exception) {
+                                Log.e("OrderScreen", "❌ Fallback cancel error: ${fallbackException.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("OrderScreen", "❌ Error cancelling order: ${e.message}")
+                    }
+                }
             }
-        } else if (result == "failed") {
-            Toast.makeText(context, "Thanh toán thất bại", Toast.LENGTH_SHORT).show()
+            
+            // ✅ Reset ngay lập tức để tránh xung đột
+            paymentResult.value = null
+            appTransId.value = null
+            isPaymentInProgress = false
+            isProcessingResult = false
+            
+            Log.d("OrderScreen", "=== PAYMENT RESULT PROCESSED ===")
         }
-        // Reset
-        paymentResult.value = null
-        appTransId.value = null
     }
+    
+    // ✅ TẠM THỜI VÔ HIỆU HÓA - Xử lý khi user thoát khỏi WebView mà chưa thanh toán
+    // LaunchedEffect(isPaymentInProgress, hasWebViewResult, isProcessingResult) {
+    //     // Chỉ xử lý khi payment đã kết thúc, chưa có kết quả từ WebView và chưa đang xử lý
+    //     if (!isPaymentInProgress && appTransId.value != null && !hasWebViewResult && !isProcessingResult) {
+    //         // User đã thoát khỏi WebView mà chưa có kết quả - hủy đơn hàng
+    //         val transId = appTransId.value
+    //         if (transId != null) {
+    //             Log.d("OrderScreen", "User exited WebView without payment - cancelling order")
+    //             try {
+    //                 val cancelRequest = ZlpCancelOrderRequest(appTransId = transId)
+    //                 val cancelResp = RetrofitClient.zaloPayService.cancelOrder(cancelRequest)
+    //                 if (cancelResp.isSuccessful) {
+    //                     Log.d("OrderScreen", "Order cancelled due to user exit")
+    //                     errorMessage = "Thanh toán đã bị hủy"
+    //                     showErrorDialog = true
+    //                 }
+    //             } catch (e: Exception) {
+    //                 Log.e("OrderScreen", "Error cancelling order on user exit: ${e.message}")
+    //             }
+    //         }
+    //     }
+    // }
 
     user?.let { currentUser ->
         OrderContent(
@@ -215,9 +418,24 @@ fun OrderScreenContent(
                             selectedAddress,
                             noteText,
                             appTransId,
-                            { isPlacing = true },
-                            { isPlacing = false },
-                            { Toast.makeText(context, "Không tạo được thanh toán", Toast.LENGTH_SHORT).show() }
+                            { 
+                                isPlacing = true
+                                isPaymentInProgress = true
+                                hasWebViewResult = false // ✅ Reset trạng thái khi bắt đầu thanh toán mới
+                                isProcessingResult = false // ✅ Reset trạng thái xử lý kết quả
+                                Log.d("OrderScreen", "Creating ZaloPay order - will be in 'CHỜ XÁC NHẬN' status")
+                            },
+                            { 
+                                isPlacing = false
+                                // ✅ KHÔNG hiển thị dialog thành công ngay - chờ kết quả thanh toán
+                                Log.d("OrderScreen", "ZaloPay order created - status: 'CHỜ XÁC NHẬN', waiting for payment result")
+                            },
+                            { 
+                                isPlacing = false
+                                errorMessage = "Không tạo được thanh toán"
+                                showErrorDialog = true
+                                Log.e("OrderScreen", "Failed to create ZaloPay order")
+                            }
                         )
                     }
                     PaymentMethod.COD -> {
@@ -241,13 +459,27 @@ fun OrderScreenContent(
 
         if (showSuccessDialog) {
             SuccessDialog(
-                message = "Đặt hàng thành công!",
+                message = if (selectedMethod == PaymentMethod.ZALOPAY) {
+                    "Thanh toán thành công!\nĐơn hàng đang chờ xác nhận từ shop."
+                } else {
+                    "Đặt hàng thành công!\nĐơn hàng đang chờ xác nhận từ shop."
+                },
                 onDismiss = {
                     showSuccessDialog = false
                     val intent = Intent(context, Home::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                     context.startActivity(intent)
                     (context as? Activity)?.finish()
+                }
+            )
+        }
+        
+        if (showErrorDialog) {
+            SuccessDialog(
+                message = errorMessage,
+                onDismiss = {
+                    showErrorDialog = false
+                    errorMessage = ""
                 }
             )
         }
@@ -482,7 +714,7 @@ private fun createZaloPayOrderSafe(
     onFinish: () -> Unit,
     onFailure: () -> Unit
 ) {
-    val redirectUrl = "myapp://payment?status=success" // ✅ Thêm redirectUrl cho đồng bộ
+    val redirectUrl = "myapp://payment/result?status=success" // ✅ Cập nhật redirectUrl theo backend mới
     val request = ZlpCreatePaymentRequest(
         userId = user._id ?: "",
         items = selectedItems,
@@ -620,3 +852,4 @@ fun OrderItemRow(item: CartItem) {
     }
 }
 
+// h

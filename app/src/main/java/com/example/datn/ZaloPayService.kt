@@ -13,15 +13,23 @@ interface ZaloPayService {
         @Body request: ZlpCreatePaymentRequest
     ): Response<ZlpBackendCreateResponse>
 
-    // ✅ THÊM: Method query status (POST /query với body {app_trans_id})
+    // ✅ Query status (POST /query với body {app_trans_id})
     @POST("api/payments/zalopay/query")
     suspend fun queryStatus(
-        @Body request: ZlpQueryRequest // Giả sử data class: data class ZlpQueryRequest(val app_trans_id: String)
-    ): Response<ZlpQueryResponse> // Giả sử response có return_code, return_message
+        @Body request: ZlpQueryRequest
+    ): Response<ZlpQueryResponse>
 
-    // Giữ /return nếu cần, nhưng không dùng cho query
+    // ✅ Return endpoint (GET /return) - để check status từ redirect
     @GET("api/payments/zalopay/return")
     suspend fun checkOrderStatus(
-        @Query("apptransid") appTransId: String
+        @Query("apptransid") appTransId: String,
+        @Query("status") status: String? = null,
+        @Query("return_code") returnCode: String? = null
     ): Response<ReturnOrderResponse>
+    
+    // ✅ Cancel order endpoint - để hủy đơn hàng khi thanh toán thất bại
+    @POST("api/payments/zalopay/cancel")
+    suspend fun cancelOrder(
+        @Body request: ZlpCancelOrderRequest
+    ): Response<ZlpCancelOrderResponse>
 }
